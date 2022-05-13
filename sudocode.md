@@ -21,7 +21,7 @@ class Server{
     char *_msgBuffer; // 클라이언트가 보내는 메세지 버퍼;
 	Server(int port, std::string password); //생성자
     ~Server(); //소멸자
-    std::vector<std::pair<int, std::string>> parsing(); //명령어 파싱함수(); 잘라서 벡터로 반환
+    std::vector<std::pair<int, std::string> > parsing(); //명령어 파싱함수(); 잘라서 벡터로 반환
 	//TODO : 나중에 CMD, ARG 등 #define
 
     public :
