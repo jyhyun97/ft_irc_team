@@ -4,14 +4,45 @@
 #include <vector>
 #include "Channel.hpp"
 #include "Client.hpp"
+#include "Command.hpp"
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/poll.h>
 #include <unistd.h>
+#include <sstream>
+#include <string>
 
 class Channel;
 class Client;
+// class Command;
+
+std::vector<std::string> split(std::string &line)
+{
+	std::vector<std::string> tab;
+	std::string word_buf;
+	bool space = false;
+
+	for (int i = 0; i < (int)line.size(); i++)
+	{
+		if (line[i] == ' ' && space == false)
+		{
+			space = true;
+			if (word_buf.size() > 0)
+				tab.push_back(word_buf);
+			word_buf.clear();
+		}
+		else
+		{
+			word_buf += line[i];
+			if (line[i] != ' ')
+				space = false;
+		}
+	}
+	if (word_buf.size() > 0)
+		tab.push_back(word_buf);
+	return tab;
+}
 
 class Server
 {
@@ -24,7 +55,8 @@ private:
 
 	int _serverSocketFd;//서버소켓fd;
 	sockaddr_in _serverSocketAddr;//서버소켓주소;
-
+	Command _command;
+	
 	std::vector<std::pair<int, std::string> > parsing(); //명령어 파싱함수(); 잘라서 벡터로 반환
 	// TODO : 나중에 CMD, ARG 등 #define
 	// NICK, JOIN, USER, MSG, KICK, BAN, PASS, QUIT, HELP
@@ -62,7 +94,33 @@ public:
 		if (listen(_serverSocketFd, 5) == -1)
 			exit(3);
 		return (0);
-		//TODO : 에러처리 나중에 어떻게 할 지 생각할 것
+	//TODO : 에러처리 나중에 어떻게 할 지 생각할 것
+	};
+	void check_cmd(std::vector<std::string> cmd_vec, pollfd pollClient){
+		if (cmd_vec[0] == "NICK")
+			_command.nick(cmd_vec);
+		else if (cmd_vec[0] == "USER")
+			_command.user(cmd_vec);
+		else if (cmd_vec[0] == "JOIN")
+			_command.join(cmd_vec);
+		else if (cmd_vec[0] == "KICK")
+			_command.kick(cmd_vec);
+		else if (cmd_vec[0] == "PRIVMSG")
+			_command.privmsg(cmd_vec);
+		else if (cmd_vec[0] == "PASS")
+			_command.pass(cmd_vec);
+		else if (cmd_vec[0] == "PART")
+			_command.part(cmd_vec);
+		else if (cmd_vec[0] == "QUIT")
+			_command.quit(cmd_vec);
+		else if (cmd_vec[0] == "HELP")
+			_command.help(cmd_vec);
+		else if (cmd_vec[0] == "WHOIS")
+			_command.whois(cmd_vec, pollClient);
+		else //미구현 커맨드 알림 또는 커맨드 무시
+		{
+			std::cout << "undefined cmd\n";
+		}
 	};
 	int execute()
 	{
@@ -92,6 +150,8 @@ public:
 				client_len = sizeof(client_addr);
 				client_fd = accept(_serverSocketFd, (struct sockaddr *)&client_addr, &client_len);
 				std::cout << "connect client\n";
+				//비번 확인
+				
 				for (i = 1; i < OPEN_MAX; i++)
 				{
 					if (pollClient[i].fd < 0)
@@ -123,15 +183,31 @@ public:
 					}
 					else
 					{
+						//파싱~~~
 						_msgBuffer = std::string(buf);
-						for (int j = 0; j <= max_client; j++)
+						std::cout << "-------start--------------\n";
+						std::cout << _msgBuffer << std::endl;
+						std::vector<std::string> result = split(_msgBuffer);
+
+						std::vector<std::string>::iterator it = result.begin();
+						while (it != result.end())
 						{
-							if (i != j)
-							{
-								send(pollClient[j].fd, ">> ", 3, 0);
-								send(pollClient[j].fd, _msgBuffer.c_str(), _msgBuffer.length(), 0);
-							}
+							std::cout << "v :" << *it << std::endl;
+							it++;
 						}
+						
+						//recvBuffer, sendBuffer 필요
+						_msgBuffer = "001 babo :Welcome to the Internet Relay Network babo\r\n";
+						check_cmd(result, pollClient[i]);//클라이언트를 가지고 갈 것?
+
+						// send(pollClient[j].fd, ">> ", 3, 0);
+						
+						send(pollClient[i].fd, _msgBuffer.c_str(), _msgBuffer.length(), 0);
+						memset(buf, 0x00, 512);
+						_msgBuffer.clear();
+
+						
+
 					}
 				}
 			}

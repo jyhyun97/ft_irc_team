@@ -8,7 +8,6 @@ class Channel;
 
 class Client{
 	private :
-		bool _isOperator; //방장이면 true
         std::string stuff;//각종이름;
 		//TODO : 사용되는 이름 조사하기
         std::vector<Channel> _myChannelList;

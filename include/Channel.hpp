@@ -11,7 +11,7 @@ class Channel{
 private : 
 	std::string _channelName;//채널이름;
     std::vector<Client> _clientList;//접속중인 클라이언트 목록;
-	std::string _operaterNickName; //방장이름
+	Client *_operaterNickName; //방장이름
 	int checkChannelName();//채널이름 중복 체크함수
 	int setOperator(Client &client); //채널 방장 설정함수, 객체를 받아서 그 객체에게도 방장이 되었음을 알려줘야함.
 public :
