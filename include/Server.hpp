@@ -153,15 +153,13 @@ public:
 		else if (cmd_vec[0] == "KICK")
 			_command.kick(cmd_vec);
 		else if (cmd_vec[0] == "PRIVMSG")
-			_command.privmsg(cmd_vec);
+			_command.privmsg(cmd_vec, client);
 		else if (cmd_vec[0] == "PASS")
 			_command.pass(cmd_vec);
 		else if (cmd_vec[0] == "PART")
 			_command.part(cmd_vec);
 		else if (cmd_vec[0] == "QUIT")
 			_command.quit(cmd_vec);
-		else if (cmd_vec[0] == "HELP")
-			_command.help(cmd_vec);
 		else if (cmd_vec[0] == "WHOIS")
 			_command.whois(cmd_vec, client);
 		else if (cmd_vec[0] == "CAP")//CAP LS
