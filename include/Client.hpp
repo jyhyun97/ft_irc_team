@@ -8,11 +8,24 @@ class Channel;
 
 class Client{
 	private :
-        std::string stuff;//각종이름;
+        std::string stuff;//각종이름;//nick real username hostname 등..등.....
 		//TODO : 사용되는 이름 조사하기
+		int _clientFd;
         std::vector<Channel> _myChannelList;
-        char *_msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
-    public : 
+        std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
+    public :
+		Client(int clientFd) : _clientFd(clientFd){
+		}
+		std::string getMsgBuffer(){
+			return _msgBuffer;
+		};
+		void setMsgBuffer(std::string msgBuffer){
+			_msgBuffer = msgBuffer;
+		};
+		int getClientFd(){
+			return _clientFd;
+		}
+		
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();

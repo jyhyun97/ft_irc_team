@@ -56,7 +56,41 @@ private:
 	int _serverSocketFd;//서버소켓fd;
 	sockaddr_in _serverSocketAddr;//서버소켓주소;
 	Command _command;
-	
+
+	pollfd _pollClient[OPEN_MAX];
+	int _pollLet;
+	int _maxClient;
+
+	socklen_t _clientLen;
+	int _clientFd;
+	sockaddr_in _clientAddr;
+
+	int pollingEvent(int &index){
+		_clientLen = sizeof(_clientAddr);
+		_clientFd = accept(_serverSocketFd, (struct sockaddr *)&_clientAddr, &_clientLen);
+		//TODO : accept 예외처리
+		Client tmp(_clientFd);
+		_clientList.push_back(tmp);
+		std::cout << "connect client\n";
+		//비번 확인
+
+		for (index = 1; index < OPEN_MAX; index++)
+		{
+			if (_pollClient[index].fd < 0)
+			{
+				_pollClient[index].fd = _clientFd;
+				break;
+			}
+		}
+		// TODO: i 최대값 확인하기
+		_pollClient[index].events = POLLIN;
+		if (index > _maxClient)
+			_maxClient = index;
+		//std::cout << "pollLet " << _pollLet << std::endl;
+		if (--_pollLet <= 0)
+			return (-1);
+		return (0);
+	}
 	std::vector<std::pair<int, std::string> > parsing(); //명령어 파싱함수(); 잘라서 벡터로 반환
 	// TODO : 나중에 CMD, ARG 등 #define
 	// NICK, JOIN, USER, MSG, KICK, BAN, PASS, QUIT, HELP
@@ -66,6 +100,18 @@ public:
 	Server(int port, std::string password) : _port(port), _password(password)
 	{
 		sock_init();
+		//poll_init();
+		_pollLet = 0;
+		_maxClient = 0;
+		_pollClient[0].fd = _serverSocketFd;
+		_pollClient[0].events = POLLIN;//읽을 데이터가 있다는 이벤트
+
+		// pollifd 구조체의 모든 fd를 -1로 초기화
+		for (int i = 1; i < OPEN_MAX; i++){
+			_pollClient[i].fd = -1;
+		}
+		Client a(_serverSocketFd);//DUMMY
+		_clientList.push_back(a);
 		//TODO : 생성자에서 try catch를 해도 되는가?
 	}
 	~Server(){};	//소멸자
@@ -93,10 +139,11 @@ public:
 			exit(1);
 		if (listen(_serverSocketFd, 5) == -1)
 			exit(3);
+		std::cout << "listening" << std::endl;
 		return (0);
 	//TODO : 에러처리 나중에 어떻게 할 지 생각할 것
 	};
-	void check_cmd(std::vector<std::string> cmd_vec, pollfd pollClient){
+	void check_cmd(std::vector<std::string> cmd_vec, Client client){
 		if (cmd_vec[0] == "NICK")
 			_command.nick(cmd_vec);
 		else if (cmd_vec[0] == "USER")
@@ -116,101 +163,77 @@ public:
 		else if (cmd_vec[0] == "HELP")
 			_command.help(cmd_vec);
 		else if (cmd_vec[0] == "WHOIS")
-			_command.whois(cmd_vec, pollClient);
+			_command.whois(cmd_vec, client);
+		else if (cmd_vec[0] == "CAP")//CAP LS
+			_command.welcome(cmd_vec, client);
 		else //미구현 커맨드 알림 또는 커맨드 무시
-		{
 			std::cout << "undefined cmd\n";
-		}
 	};
+
+
+	void relayEvent()
+	{
+		char buf[512]; //
+		for (int i = 1; i <= _maxClient; i++)
+		{
+			
+			if (_pollClient[i].fd < 0)
+				continue;
+			if (_pollClient[i].revents & (POLLIN)){
+				//
+				//
+				memset(buf, 0x00, 512);
+				// read하고 write하기
+				if (recv(_pollClient[i].fd, buf, 512, 0) <= 0) //
+				{
+					_pollClient[i].fd = -1;
+				}
+				else
+				{
+					_msgBuffer = std::string(buf);
+					std::cout << "MSGBUF " << _msgBuffer << std::endl;
+					std::vector<std::string> result = split(_msgBuffer);
+					//std::cout << result[0] << ", " << result[1] << std::endl;
+					check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
+					//pollout이벤트 발생
+					
+					// send(pollClient[j].fd, ">> ", 3, 0);
+
+					
+				}
+			}
+			else if (_pollClient[i].revents & (POLLERR)){
+				std::cout <<"ERROR" << std::endl;
+				exit(3);
+			}
+			if (_clientList[i].getMsgBuffer().empty() == false){//send버퍼 있는 지 확인해서 있으면 send
+				std::cout << "pollout" << std::endl;
+				std::string tmp = _clientList[i].getMsgBuffer();
+				send(_pollClient[i].fd, tmp.c_str(), tmp.length(), 0);
+				tmp.clear();
+				//send();
+			}
+		}
+	}
+
 	int execute()
 	{
-		pollfd pollClient[OPEN_MAX];//
-		int poll_let;
-		int max_client = 0;
-		int i = 0;
-		
-		pollClient[0].fd = _serverSocketFd;
-		pollClient[0].events = POLLIN;//읽을 데이터가 있다는 이벤트
-
-		// pollifd 구조체의 모든 fd를 -1로 초기화
-		for (i = 1; i < OPEN_MAX; i++)
-			pollClient[i].fd = -1;
-
-		socklen_t client_len;
-		int client_fd;
-		sockaddr_in client_addr;
-		while (1)
+		int index = OPEN_MAX;
+		while (42)
 		{
-			poll_let = poll(pollClient, max_client + i, -1); //반환값?
-			if (poll_let == 0 || poll_let == -1)
+			_pollLet = poll(_pollClient, _maxClient + index, -1); //반환값?
+			//std::cout << "176" << std::endl;
+			if (_pollLet == 0 || _pollLet == -1)
 				break;
-			if (pollClient[0].revents & POLLIN)
+			//std::cout << "179" << std::endl;
+			// pollin 이벤트 받으면은 실행
+			if (_pollClient[0].revents & POLLIN)
 			{
-				// pollin 이벤트 받으면은 실행
-				client_len = sizeof(client_addr);
-				client_fd = accept(_serverSocketFd, (struct sockaddr *)&client_addr, &client_len);
-				std::cout << "connect client\n";
-				//비번 확인
-				
-				for (i = 1; i < OPEN_MAX; i++)
-				{
-					if (pollClient[i].fd < 0)
-					{
-						pollClient[i].fd = client_fd;
-						break;
-					}
-				}
-				// TODO: i 최대값 확인하기
-				pollClient[i].events = POLLIN;
-				if (i > max_client)
-					max_client = i;
-				if (--poll_let <= 0)
+				if ((pollingEvent(index)) == -1){
 					continue;
-			}
-			// buf
-			char buf[512];//
-			for (i = 1; i <= max_client; i++)
-			{
-				if (pollClient[i].fd < 0)
-					continue;
-				if (pollClient[i].revents & (POLLIN | POLLERR))
-				{
-					memset(buf, 0x00, 512);
-					// read하고 write하기
-					if (recv(pollClient[i].fd, buf, 512, 0) <= 0)//
-					{
-						pollClient[i].fd = -1;
-					}
-					else
-					{
-						//파싱~~~
-						_msgBuffer = std::string(buf);
-						std::cout << "-------start--------------\n";
-						std::cout << _msgBuffer << std::endl;
-						std::vector<std::string> result = split(_msgBuffer);
-
-						std::vector<std::string>::iterator it = result.begin();
-						while (it != result.end())
-						{
-							std::cout << "v :" << *it << std::endl;
-							it++;
-						}
-						
-						//recvBuffer, sendBuffer 필요
-						_msgBuffer = "001 babo :Welcome to the Internet Relay Network babo\r\n";
-						check_cmd(result, pollClient[i]);//클라이언트를 가지고 갈 것?
-
-						// send(pollClient[j].fd, ">> ", 3, 0);
-						
-						send(pollClient[i].fd, _msgBuffer.c_str(), _msgBuffer.length(), 0);
-						memset(buf, 0x00, 512);
-						_msgBuffer.clear();
-
-						
-
-					}
 				}
 			}
+			relayEvent();//recvEvent, sendEvent;
 		}
 		close(_serverSocketFd);
 		return (0);

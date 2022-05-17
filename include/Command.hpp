@@ -26,16 +26,17 @@ class Command
 	void part(std::vector<std::string> s){std::cout << "i am part\n";};//PART <channel> *( "," <channel> ) [ <Part Message> ]
 	void quit(std::vector<std::string> s){std::cout << "i am quitt\n";};//QUIT [<Quit message>]
 	void help(std::vector<std::string> s){std::cout << "i am help\n";};//HELP
-	void whois(std::vector<std::string> s, pollfd pollClient){
-		//TODO: 보내는 버퍼는 커맨드 클래스 밖에서 구현
-		std::string _msgBuffer;
-		char buf[512];
-		_msgBuffer = "311 jeonhyun jeonhyun 127.0.0.1 * :현정연\r\n";
-		send(pollClient.fd, _msgBuffer.c_str(), _msgBuffer.length(), 0);
-		memset(buf, 0x00, 512);
-		_msgBuffer.clear();
+	void whois(std::vector<std::string> s, Client client){
+		client.setMsgBuffer("311 jeonhyun jeonhyun 127.0.0.1 * :현정연\r\n");
+		send(client.getClientFd(), client.getMsgBuffer().c_str(), client.getMsgBuffer().length(), 0);
+		client.getMsgBuffer().clear();
 		std::cout << "i am whois\n";
 	};
+	void welcome(std::vector<std::string> s, Client client){
+		client.setMsgBuffer("001 babo :Welcome to the Internet Relay Network babo\r\n");
+		send(client.getClientFd(), client.getMsgBuffer().c_str(), client.getMsgBuffer().length(), 0);
+		client.getMsgBuffer().clear();
+	}
 
 };
 
