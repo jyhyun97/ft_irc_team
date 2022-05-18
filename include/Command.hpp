@@ -64,35 +64,51 @@ std::vector<Channel *>::iterator find(std::vector<Channel *> search, std::string
 	return (it);
 }
 
+std::vector<Channel *>::iterator findChannel(std::vector<Channel *>::iterator begin, std::vector<Channel *>::iterator end, std::string item){
+	std::vector<Channel *>::iterator it = begin;
+	while (it != end){
+		if ((*it)->getChannelName() == item)
+			return (it);
+		it++;
+	}
+	return (end);
+}
+
 class Command
 {
     public :
     void nick(std::vector<std::string> s){std::cout << "i am nick\n";};//NICK <parameter>
     void user(std::vector<std::string> s){std::cout << "i am user\n";};//USER <username> <hostname> <servername> <realname>
-    void join(std::vector<std::string> s, Client *client, std::vector<Channel *> &channelList){//JOIN ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] ) / "0"
+    void join(std::vector<std::string> s, Client *client, std::vector<Channel *> &channelList){
+		//JOIN ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] ) / "0"
 		//JOIN #foo,#bar
 		std::vector<std::string> joinChannel = cmd_split(s[1], ',');
 		std::vector<std::string>::iterator it = joinChannel.begin();
-		while (it != joinChannel.end())
-		{
-			//if (중복아니면)
-			//	새 채널 만들기; 서버.채널리스트에 갱신
-			if (find(channelList, *it) == channelList.end())
-			{
-				std::cout << "channel name " << *it << std::endl;
-				channelList.push_back(new Channel(*it));
-				std::cout << "add channel name" << channelList.back()->getChannelName() << std::endl;
+		while (it != joinChannel.end()){
+			//클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신//join
+
+			std::vector<Channel *>::iterator channelBegin = channelList.begin();
+			std::vector<Channel *>::iterator channelEnd = channelList.end();
+			std::vector<Channel *>::iterator findIter = findChannel(channelBegin, channelEnd, *it);
+
+			if (findIter != channelList.end()){
+				// 채널 객체가 이미 존재하는 경우
+				(*findIter)->addMyClientList(client);
+				client->addChannelList(*findIter);
 			}
-			//클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신//join	
-			// 들어간채널|| 찾은 채널 .클라이언트갱신()
-			(*find(channelList, *it))->addMyClientList(client);
-			// client.갱신채널리스트()
-			client->addChannelList((*find(channelList, *it)));
+			else{
+				// 새 채널 만들기; 서버.채널리스트에 추가
+				channelList.push_back(new Channel(*it));
+				// 위에서 생성된 채널 클래스 객체에 유저 추가
+				channelList.back()->addMyClientList(client);
+				// 클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
+				client->addChannelList(channelList.back());
+			}
 			it++;
 		}
 		print_channel(channelList);
 
-		
+// //connect 127.0.0.1 6667 0000
 		//파싱해서 채널 이름 따오고
 		//서버.채널리스트에 없으면 채널 객체 만들어서 채널 리스트에 추가
 		//클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
@@ -104,7 +120,7 @@ class Command
 		std::stringstream ss;
 		ss << client->getClientFd();
 		std::string str = ss.str();
-		
+
 		client->setMsgBuffer("001 babo :42424242 [" + str + "]\r\n");
 		send(client->getClientFd(), client->getMsgBuffer().c_str(), client->getMsgBuffer().length(), 0);
 		client->getMsgBuffer().clear();
@@ -121,9 +137,9 @@ class Command
 	};
 	void welcome(std::vector<std::string> s, Client *client){
 		client->setMsgBuffer("001 babo :Welcome to the Internet Relay Network babo\r\n");
-		send(client->getClientFd(), client->getMsgBuffer().c_str(), client->getMsgBuffer().length(), 0);
-		std::cout << "wellcome\n";
-		client->getMsgBuffer().clear();
+		// send(client->getClientFd(), client->getMsgBuffer().c_str(), client->getMsgBuffer().length(), 0);
+		std::cout << "welcome\n";
+		// client->getMsgBuffer().clear();
 	}
 
 };

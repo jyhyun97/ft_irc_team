@@ -179,12 +179,10 @@ public:
 		char buf[512]; //
 		for (int i = 1; i <= _maxClient; i++)
 		{
-			
+
 			if (_pollClient[i].fd < 0)
 				continue;
 			if (_pollClient[i].revents & (POLLIN)){
-				//
-				//
 				memset(buf, 0x00, 512);
 				// read하고 write하기
 				if (recv(_pollClient[i].fd, buf, 512, 0) <= 0) //
@@ -194,27 +192,26 @@ public:
 				else
 				{
 					_msgBuffer = std::string(buf);
-					std::cout << "MSGBUF " << _msgBuffer << std::endl;
+					std::cout << "--- recvMsgBuf --- \n" << _msgBuffer << std::endl;
+					std::cout << "--- endRecvMsgBuf --- " << std::endl;
 					std::vector<std::string> result = split(_msgBuffer, ' ');
 					//std::cout << result[0] << ", " << result[1] << std::endl;
 					check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
-					//pollout이벤트 발생
 					_msgBuffer.clear();
-					// send(pollClient[j].fd, ">> ", 3, 0);
-
-					
 				}
 			}
 			else if (_pollClient[i].revents & (POLLERR)){
-				std::cout <<"ERROR" << std::endl;
+				std::cout <<"--- ERROR ---" << std::endl;
 				exit(3);
 			}
 			if (_clientList[i]->getMsgBuffer().empty() == false){//send버퍼 있는 지 확인해서 있으면 send
-				std::cout << "pollout" << std::endl;
+				// std::cout << "--- pollout ---" << std::endl;
 				std::string tmp = _clientList[i]->getMsgBuffer();
 				send(_pollClient[i].fd, tmp.c_str(), tmp.length(), 0);
+				std::cout << "sendMsg : " << tmp << std::endl;
 				tmp.clear();
-				//send();
+				_clientList[i]->setMsgBuffer("");
+				// std::cout << "--- endpollout ---" << std::endl;
 			}
 		}
 	}
