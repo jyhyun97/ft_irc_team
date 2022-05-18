@@ -11,7 +11,7 @@ class Client{
         std::string stuff;//각종이름;//nick real username hostname 등..등.....
 		//TODO : 사용되는 이름 조사하기
 		int _clientFd;
-        std::vector<Channel> _myChannelList;
+        std::vector<Channel *> _myChannelList;
         std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
     public :
 		Client(int clientFd) : _clientFd(clientFd){
@@ -25,7 +25,10 @@ class Client{
 		int getClientFd(){
 			return _clientFd;
 		}
-		
+		void addChannelList(Channel *channel)
+		{
+			_myChannelList.push_back(channel);
+		}
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();
