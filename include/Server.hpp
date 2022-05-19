@@ -17,7 +17,7 @@ class Channel;
 class Client;
 // class Command;
 
-std::vector<std::string> split(std::string &line)
+std::vector<std::string> split(std::string &line, char c)
 {
 	std::vector<std::string> tab;
 	std::string word_buf;
@@ -25,7 +25,7 @@ std::vector<std::string> split(std::string &line)
 
 	for (int i = 0; i < (int)line.size(); i++)
 	{
-		if (line[i] == ' ' && space == false)
+		if (line[i] == c && space == false)
 		{
 			space = true;
 			if (word_buf.size() > 0)
@@ -35,7 +35,7 @@ std::vector<std::string> split(std::string &line)
 		else
 		{
 			word_buf += line[i];
-			if (line[i] != ' ')
+			if (line[i] != c)
 				space = false;
 		}
 	}
@@ -47,8 +47,8 @@ std::vector<std::string> split(std::string &line)
 class Server
 {
 private:
-	std::vector<Channel> _channelList;					//채널목록;
-	std::vector<Client> _clientList;					//전체 클라이언트목록;
+	std::vector<Channel *> _channelList;					//채널목록;
+	std::vector<Client *> _clientList;					//전체 클라이언트목록;
 	int _port;											//포트 번호
 	std::string _password;								// 서버 비밀번호
 	std::string _msgBuffer;									// 클라이언트가 보내는 메세지 버퍼;
@@ -69,8 +69,9 @@ private:
 		_clientLen = sizeof(_clientAddr);
 		_clientFd = accept(_serverSocketFd, (struct sockaddr *)&_clientAddr, &_clientLen);
 		//TODO : accept 예외처리
-		Client tmp(_clientFd);
-		_clientList.push_back(tmp);
+		//Client tmp(_clientFd);
+		_clientList.push_back(new Client(_clientFd));
+		std::cout << "client fd: " << _clientList.back()->getClientFd() << std::endl;
 		std::cout << "connect client\n";
 		//비번 확인
 
@@ -110,8 +111,8 @@ public:
 		for (int i = 1; i < OPEN_MAX; i++){
 			_pollClient[i].fd = -1;
 		}
-		Client a(_serverSocketFd);//DUMMY
-		_clientList.push_back(a);
+		//Client a(_serverSocketFd);//DUMMY
+		_clientList.push_back(new Client(_serverSocketFd));
 		//TODO : 생성자에서 try catch를 해도 되는가?
 	}
 	~Server(){};	//소멸자
@@ -143,13 +144,13 @@ public:
 		return (0);
 	//TODO : 에러처리 나중에 어떻게 할 지 생각할 것
 	};
-	void check_cmd(std::vector<std::string> cmd_vec, Client client){
+	void check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		if (cmd_vec[0] == "NICK")
 			_command.nick(cmd_vec);
 		else if (cmd_vec[0] == "USER")
 			_command.user(cmd_vec);
 		else if (cmd_vec[0] == "JOIN")
-			_command.join(cmd_vec);
+			_command.join(cmd_vec, client, _channelList);
 		else if (cmd_vec[0] == "KICK")
 			_command.kick(cmd_vec);
 		else if (cmd_vec[0] == "PRIVMSG")
@@ -169,17 +170,19 @@ public:
 	};
 
 
+	void addChannelList(std::string channelName)
+	{
+		_channelList.push_back(new Channel(channelName));
+	}
 	void relayEvent()
 	{
 		char buf[512]; //
 		for (int i = 1; i <= _maxClient; i++)
 		{
-			
+
 			if (_pollClient[i].fd < 0)
 				continue;
 			if (_pollClient[i].revents & (POLLIN)){
-				//
-				//
 				memset(buf, 0x00, 512);
 				// read하고 write하기
 				if (recv(_pollClient[i].fd, buf, 512, 0) <= 0) //
@@ -189,27 +192,26 @@ public:
 				else
 				{
 					_msgBuffer = std::string(buf);
-					std::cout << "MSGBUF " << _msgBuffer << std::endl;
-					std::vector<std::string> result = split(_msgBuffer);
+					std::cout << "--- recvMsgBuf --- \n" << _msgBuffer << std::endl;
+					std::cout << "--- endRecvMsgBuf --- " << std::endl;
+					std::vector<std::string> result = split(_msgBuffer, ' ');
 					//std::cout << result[0] << ", " << result[1] << std::endl;
 					check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
-					//pollout이벤트 발생
-					
-					// send(pollClient[j].fd, ">> ", 3, 0);
-
-					
+					_msgBuffer.clear();
 				}
 			}
 			else if (_pollClient[i].revents & (POLLERR)){
-				std::cout <<"ERROR" << std::endl;
+				std::cout <<"--- ERROR ---" << std::endl;
 				exit(3);
 			}
-			if (_clientList[i].getMsgBuffer().empty() == false){//send버퍼 있는 지 확인해서 있으면 send
-				std::cout << "pollout" << std::endl;
-				std::string tmp = _clientList[i].getMsgBuffer();
+			if (_clientList[i]->getMsgBuffer().empty() == false){//send버퍼 있는 지 확인해서 있으면 send
+				// std::cout << "--- pollout ---" << std::endl;
+				std::string tmp = _clientList[i]->getMsgBuffer();
 				send(_pollClient[i].fd, tmp.c_str(), tmp.length(), 0);
+				std::cout << "sendMsg : " << tmp << std::endl;
 				tmp.clear();
-				//send();
+				_clientList[i]->setMsgBuffer("");
+				// std::cout << "--- endpollout ---" << std::endl;
 			}
 		}
 	}
