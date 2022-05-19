@@ -17,6 +17,24 @@ class Channel;
 class Client;
 // class Command;
 
+std::vector<std::string> CrlfSplit(std::string &line, std::string s)
+{
+	std::vector<std::string> tab;
+	std::string cmd_buf;
+	size_t start = 0;
+	size_t pos;
+
+	while ((pos = line.find(s)) != std::string::npos){
+		tab.push_back(line.substr(start, pos));
+		line = line.substr(pos + 2);
+	}
+	for (size_t i = 0; i < tab.size(); i++)
+	{
+		std::cout << "[[" <<  tab[i] << "]]" << std::endl;
+	}
+	return tab;
+}
+
 std::vector<std::string> split(std::string &line, char c)
 {
 	std::vector<std::string> tab;
@@ -146,7 +164,7 @@ public:
 	};
 	void check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		if (cmd_vec[0] == "NICK")
-			_command.nick(cmd_vec);
+			_command.nick(cmd_vec, _clientList, client);
 		else if (cmd_vec[0] == "USER")
 			_command.user(cmd_vec);
 		else if (cmd_vec[0] == "JOIN")
@@ -154,7 +172,7 @@ public:
 		else if (cmd_vec[0] == "KICK")
 			_command.kick(cmd_vec);
 		else if (cmd_vec[0] == "PRIVMSG")
-			_command.privmsg(cmd_vec, client);
+			_command.privmsg(cmd_vec, client, _clientList, _channelList);
 		else if (cmd_vec[0] == "PASS")
 			_command.pass(cmd_vec);
 		else if (cmd_vec[0] == "PART")
@@ -194,9 +212,16 @@ public:
 					_msgBuffer = std::string(buf);
 					std::cout << "--- recvMsgBuf --- \n" << _msgBuffer << std::endl;
 					std::cout << "--- endRecvMsgBuf --- " << std::endl;
-					std::vector<std::string> result = split(_msgBuffer, ' ');
-					//std::cout << result[0] << ", " << result[1] << std::endl;
-					check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
+
+					std::vector<std::string> cmd = CrlfSplit(_msgBuffer, "\r\n");
+					//TODO : 명령어 순서대로 처리하는 함수 추가하기
+					std::vector<std::string>::iterator cmd_it = cmd.begin();
+					while (cmd_it != cmd.end())
+					{
+						std::vector<std::string> result = split(*cmd_it, ' ');
+						check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
+						cmd_it++;
+					}
 					_msgBuffer.clear();
 				}
 			}

@@ -8,6 +8,7 @@ class Channel;
 
 class Client{
 	private :
+		std::string _nickName;
         std::string stuff;//각종이름;//nick real username hostname 등..등.....
 		//TODO : 사용되는 이름 조사하기
 		int _clientFd;
@@ -29,6 +30,14 @@ class Client{
 		{
 			_myChannelList.push_back(channel);
 		}
+		void setNickName(std::string nickName)
+		{
+			_nickName = nickName;
+		};
+		std::string getNickName()
+		{
+			return _nickName;
+		};
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();

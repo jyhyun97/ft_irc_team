@@ -20,6 +20,10 @@ public :
 	std::string getChannelName(){
 		return (_channelName);
 	};
+	std::vector<Client *> getMyClientList()
+	{
+		return _myClientList;
+	}
 	Client getClient();
 	void setClient();
 	int leaveEvent(Client &client); //나간 클라이언트
