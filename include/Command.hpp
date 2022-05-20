@@ -194,12 +194,14 @@ public:
 			std::cout << "닉네임규칙안맞음\n";
 			return;
 		}
+		
+		client->setMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
 		client->setNickName(s[1]);
 		//중복 체크 ->응답
 		//닉네임 규칙 체크 ->응답
 
 		//맞으면 닉네임 바꾸고 응답 보내기
-
+		
 		std::cout << "i am nick\n";
 		print_client(clientList);
 
@@ -224,6 +226,9 @@ public:
 				// 채널 객체가 이미 존재하는 경우
 				(*findIter)->addMyClientList(client);
 				client->addChannelList(*findIter);
+				client->setMsgBuffer(":" + client->getNickName() + " JOIN #seoul" + "\r\n");
+				//TODO : #seoul 말고 getchannelName헀을 때 segfault 나중에 해결하기
+				//:이름 JOIN 채널명
 			}
 			else
 			{
@@ -233,9 +238,13 @@ public:
 				channelList.back()->addMyClientList(client);
 				// 클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
 				client->addChannelList(channelList.back());
+				client->setMsgBuffer(":" + client->getNickName() + " JOIN #seoul" + "\r\n");
 			}
 			it++;
 		}
+		//채널의 클라이언트 리스트 돌면서 다 메세지 보내기
+		
+
 		print_channel(channelList);
 
 		// //connect 127.0.0.1 6667 0000
@@ -285,8 +294,19 @@ public:
 		// receiver->getMsgBuffer().clear();
 		// receiver->setMsgBuffer("001 PRIVMSG " + senderName + " " + msg + "\r\n");
 		
-		receiver->setMsgBuffer(": PRIVMSG " + senderName + " " + msg + "\r\n");
+		receiver->setMsgBuffer(":" + senderName + " PRIVMSG " + receiver->getNickName() + " " + msg + "\r\n");
 		std::cout << "fd : " << receiver->getClientFd() << std::endl;
+	};
+
+	void  channelPersonalMessage(std::string msg, std::string senderName, Client *client, std::string channelName)
+	{
+		// receiver->setMsgBuffer("001 " + senderName + " " + msg + "\r\n");
+		// send(receiver->getClientFd(), receiver->getMsgBuffer().c_str(), receiver->getMsgBuffer().length(), 0);
+		// receiver->getMsgBuffer().clear();
+		// receiver->setMsgBuffer("001 PRIVMSG " + senderName + " " + msg + "\r\n");
+		
+		client->setMsgBuffer(":" + senderName + " PRIVMSG " + channelName + " " + msg + "\r\n");
+		std::cout << "fd : " << client->getClientFd() << std::endl;
 	};
 
 	void channelMessage(std::string msg, Client *client, Channel * channel)
@@ -296,7 +316,7 @@ public:
 		while(clientsIt != clients.end())
 		{
 			if (client->getClientFd() != (*clientsIt)->getClientFd())
-				personalMessage(msg, client->getNickName(), *clientsIt);
+				channelPersonalMessage(msg, client->getNickName(), *clientsIt, channel->getChannelName());
 			clientsIt++;
 		}
 	};																   // PRIVMSG <msgtarget> <text to be sent>
@@ -311,13 +331,44 @@ public:
 	void whois(std::vector<std::string> s, Client *client)
 	{
 		client->setMsgBuffer("311 jeonhyun jeonhyun 127.0.0.1 * :현정연\r\n");
-		send(client->getClientFd(), client->getMsgBuffer().c_str(), client->getMsgBuffer().length(), 0);
-		client->getMsgBuffer().clear();
+		//send(client->getClientFd(), client->getMsgBuffer().c_str(), client->getMsgBuffer().length(), 0);
+		//client->getMsgBuffer().clear();
 		std::cout << "i am whois\n";
 	};
-	void welcome(std::vector<std::string> s, Client *client)
+	void welcome(std::vector<std::string> cmd, Client *client, std::vector<Client *> clientList)
 	{
-		client->setMsgBuffer("001 babo :Welcome to the Internet Relay Network babo\r\n");
+		//닉 체크하고 최초 닉네임 설정..
+		//유저 설정
+		std::vector<std::string>::iterator cmd_it = cmd.begin();
+		while (cmd_it != cmd.end())
+		{
+			std::vector<std::string> result = split_command(*cmd_it, ' ');
+			if (result[0] == "PASS")
+			{
+				std::cout << "cap pass\n";
+			}
+			else if (result[0] == "NICK")
+			{
+				if (!nickValidate(result[1]))
+				{
+					std::cout << "닉네임규칙안맞음\n";
+					return;
+				}
+				if (isDuplication(result[1], clientList))
+				{
+					std::cout << "nick dup\n";
+					// 중복이면 마지막에 '_' 추가하기()->웰컴단계에서
+					return;
+				}
+				client->setNickName(result[1]);
+			}
+			else if (result[0] == "USER")
+			{
+
+			}
+			cmd_it++;
+		}
+		client->setMsgBuffer("001 " + client->getNickName() + " :Welcome to the Internet Relay Network " + client->getNickName() + "\r\n");
 		// send(client->getClientFd(), client->getMsgBuffer().c_str(), client->getMsgBuffer().length(), 0);
 		std::cout << "welcome\n";
 		// client->getMsgBuffer().clear();

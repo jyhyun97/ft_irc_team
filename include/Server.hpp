@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 
+
 class Channel;
 class Client;
 // class Command;
@@ -181,8 +182,6 @@ public:
 			_command.quit(cmd_vec);
 		else if (cmd_vec[0] == "WHOIS")
 			_command.whois(cmd_vec, client);
-		else if (cmd_vec[0] == "CAP")//CAP LS
-			_command.welcome(cmd_vec, client);
 		else //미구현 커맨드 알림 또는 커맨드 무시
 			std::cout << "undefined cmd\n";
 	};
@@ -200,7 +199,8 @@ public:
 
 			if (_pollClient[i].fd < 0)
 				continue;
-			if (_pollClient[i].revents & (POLLIN)){
+			if (_pollClient[i].revents & (POLLIN))
+			{
 				memset(buf, 0x00, 512);
 				// read하고 write하기
 				if (recv(_pollClient[i].fd, buf, 512, 0) <= 0) //
@@ -210,26 +210,41 @@ public:
 				else
 				{
 					_msgBuffer = std::string(buf);
-					std::cout << "--- recvMsgBuf --- \n" << _msgBuffer << std::endl;
+					std::cout << "--- recvMsgBuf --- \n"
+							  << _msgBuffer << std::endl;
 					std::cout << "--- endRecvMsgBuf --- " << std::endl;
 
 					std::vector<std::string> cmd = CrlfSplit(_msgBuffer, "\r\n");
-					//TODO : 명령어 순서대로 처리하는 함수 추가하기
-					std::vector<std::string>::iterator cmd_it = cmd.begin();
-					while (cmd_it != cmd.end())
+					// TODO : 명령어 순서대로 처리하는 함수 추가하기
+
+					if (_clientList[i]->getNickName() == "")
 					{
-						std::vector<std::string> result = split(*cmd_it, ' ');
-						check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
-						cmd_it++;
+						std::cout << "-------\n";
+						_command.welcome(cmd, _clientList[i], _clientList);
+					}
+					else
+					{
+						std::vector<std::string>::iterator cmd_it = cmd.begin();
+						while (cmd_it != cmd.end())
+						{
+							std::vector<std::string> result = split(*cmd_it, ' ');
+							check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
+							cmd_it++;
+						}
 					}
 					_msgBuffer.clear();
 				}
 			}
-			else if (_pollClient[i].revents & (POLLERR)){
-				std::cout <<"--- ERROR ---" << std::endl;
+			else if (_pollClient[i].revents & (POLLERR))
+			{
+				std::cout << "--- ERROR ---" << std::endl;
 				exit(3);
 			}
-			if (_clientList[i]->getMsgBuffer().empty() == false){//send버퍼 있는 지 확인해서 있으면 send
+		}
+		for (int i = 1; i <= _maxClient; i++)
+		{
+			if (_clientList[i]->getMsgBuffer().empty() == false)
+			{ // send버퍼 있는 지 확인해서 있으면 send
 				// std::cout << "--- pollout ---" << std::endl;
 				std::string tmp = _clientList[i]->getMsgBuffer();
 				send(_pollClient[i].fd, tmp.c_str(), tmp.length(), 0);
@@ -247,7 +262,6 @@ public:
 		while (42)
 		{
 			_pollLet = poll(_pollClient, _maxClient + index, -1); //반환값?
-			//std::cout << "176" << std::endl;
 			if (_pollLet == 0 || _pollLet == -1)
 				break;
 			//std::cout << "179" << std::endl;
