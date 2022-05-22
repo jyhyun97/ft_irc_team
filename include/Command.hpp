@@ -156,7 +156,7 @@ private:
 	bool isDuplication(std::string s, std::vector<Client *> &clientList)
 	{
 		// clientList 돌면서 s랑 똑같은 게 있는 지 찾아서 t/f 반환
-		for (int i = 0; i < clientList.size(); i++)
+		for (int i = 0; i < (int)(clientList.size()); i++)
 		{
 			if (clientList[i]->getNickName() == s)
 				return true;
@@ -170,7 +170,7 @@ private:
 			return false;
 		if (isLetter(s[0]) == false)
 			return false;
-		for (int i = 1; i < s.length(); i++)
+		for (int i = 1; i < (int)(s.length()); i++)
 		{
 			if (!isLetter(s[i]) && !isSpecial(s[i]) && !isNumber(s[i]))
 				return false;
@@ -206,7 +206,9 @@ public:
 		print_client(clientList);
 
 	};																	   // NICK <parameter>
-	void user(std::vector<std::string> s) { std::cout << "i am user\n"; }; // USER <username> <hostname> <servername> <realname>
+	void user(std::vector<std::string> s) { 
+		std::cout << "called" << s[0] << std::endl;
+	}; // USER <username> <hostname> <servername> <realname>
 	void join(std::vector<std::string> s, Client *client, std::vector<Channel *> &channelList)
 	{
 		// JOIN ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] ) / "0"
@@ -251,10 +253,12 @@ public:
 		//파싱해서 채널 이름 따오고
 		//서버.채널리스트에 없으면 채널 객체 만들어서 채널 리스트에 추가
 		//클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
-
-		std::cout << "i am join\n";
+		
+		std::cout << "called" << s[0] << std::endl;
 	};
-	void kick(std::vector<std::string> s) { std::cout << "i am kick\n"; }; // KICK <channel> <user> [<comment>]//KICK <channel> <user> [<comment>]
+	void kick(std::vector<std::string> s) {
+		std::cout << "called" << s[0] << std::endl;
+	}; // KICK <channel> <user> [<comment>]//KICK <channel> <user> [<comment>]
 	void privmsg(std::vector<std::string> s, Client *client, std::vector<Client *> clientList, std::vector<Channel *> channelList)
 	{
 		// privmsg <target> :text
@@ -320,20 +324,24 @@ public:
 			clientsIt++;
 		}
 	};																   // PRIVMSG <msgtarget> <text to be sent>
-	void pass(std::vector<std::string> s) { std::cout << "i am pass\n"; }; // PASS <password>
-	void part(std::vector<std::string> s) { std::cout << "i am part\n"; }; // PART <channel> *( "," <channel> ) [ <Part Message> ]
+	void pass(std::vector<std::string> s) {
+		std::cout << "called" << s[0] << std::endl;
+	}; // PASS <password>
+	void part(std::vector<std::string> s) {
+		std::cout << "called" << s[0] << std::endl;
+	}; // PART <channel> *( "," <channel> ) [ <Part Message> ]
 	void quit(std::vector<std::string> s)
 	{
 		//소켓지우고
 		//리스트에서 지우고
-		std::cout << "i am quitt\n";
+		std::cout << "called" << s[0] << std::endl;
 	}; // QUIT [<Quit message>]
 	void whois(std::vector<std::string> s, Client *client)
 	{
 		client->setMsgBuffer("311 jeonhyun jeonhyun 127.0.0.1 * :현정연\r\n");
 		//send(client->getClientFd(), client->getMsgBuffer().c_str(), client->getMsgBuffer().length(), 0);
 		//client->getMsgBuffer().clear();
-		std::cout << "i am whois\n";
+		std::cout << "called" << s[0] << std::endl;
 	};
 	void welcome(std::vector<std::string> cmd, Client *client, std::vector<Client *> clientList)
 	{
