@@ -66,7 +66,7 @@ private:
 	}
 	std::vector<std::pair<int, std::string> > parsing(); //명령어 파싱함수(); 잘라서 벡터로 반환
 	// TODO : 나중에 CMD, ARG 등 #define
-	// NICK, JOIN, USER, MSG, KICK, BAN, PASS, QUIT, HELP
+	// NICK, JOIN, USER, MSG, KICK, PASS, QUIT
 
 
 public:
@@ -91,7 +91,6 @@ public:
 	// 각 명령어 함수;
 	// 클라이언트 관리 함수(get / setClient);
 	// 채널 관리 함수(get / setChannel);
-	// TODO : 어떤 명령어 할 것인지 조사
 	// TODO : 예외처리 클래스 구현
 
 	/* 서버 생성시 해야하는 일
@@ -199,7 +198,7 @@ public:
 				send(_pollClient[i].fd, tmp.c_str(), tmp.length(), 0);
 				std::cout << "sendMsg : " << tmp << std::endl;
 				tmp.clear();
-				_clientList[i]->setMsgBuffer("");
+				_clientList[i]->clearMsgBuffer();
 			}
 		}
 	}

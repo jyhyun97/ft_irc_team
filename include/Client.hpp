@@ -13,7 +13,6 @@ class Client{
 		std::string _hostName;
 		std::string _serverName;
 		std::string _realName;
-		//<username> <hostname> <servername> <realname>
 		int _clientFd;
         std::vector<Channel *> _myChannelList;
         std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
@@ -23,8 +22,11 @@ class Client{
 		std::string getMsgBuffer(){
 			return _msgBuffer;
 		};
-		void setMsgBuffer(std::string msgBuffer){
-			_msgBuffer = msgBuffer;
+		void clearMsgBuffer(){
+			_msgBuffer = "";
+		};
+		void appendMsgBuffer(std::string msgBuffer){
+			_msgBuffer.append(msgBuffer);
 		};
 		int getClientFd(){
 			return _clientFd;
@@ -60,12 +62,24 @@ class Client{
 			return _realName;
 		};
 
+		void DebugPrint(){
+			std::cout << "nickName : " << _nickName << std::endl;
+			std::cout << "userName : " << _userName << std::endl;
+			std::cout << "hostName : " << _hostName << std::endl;
+			std::cout << "serverName : " << _serverName << std::endl;
+			std::cout << "realName : " << _realName << std::endl;
+			std::cout << "clientFd : " << _clientFd << std::endl;
+			std::cout << "myChannelList : " << std::endl;
+			// print_channelList(_myChannelList);
+			std::cout << "msgBuffer : " << _msgBuffer << std::endl;
+		};
+
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();
 		// set각종이름();
-		// partMyChannel(); //vector.erase 클라이언트가 채널을 나갈 때 
-		//TODO : part명령어가 여러개의 채널을 동시에 떠날 수 있는지 체크하기 
+		// partMyChannel(); //vector.erase 클라이언트가 채널을 나갈 때
+		//TODO : part명령어가 여러개의 채널을 동시에 떠날 수 있는지 체크하기
 };
 
 
