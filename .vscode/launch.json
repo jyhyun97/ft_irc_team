@@ -8,8 +8,8 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "/Users/jeonhyun/Desktop/42cursus/ft_irc_team/src/a.out",
-            "args": ["6668", "0000"],
+            "program": "/Users/jeonhyun/Desktop/42cursus/ft_irc_team/ircserv",
+            "args": ["6667", "0000"],
             "cwd": "${workspaceFolder}"
         }
     ]

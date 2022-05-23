@@ -12,56 +12,11 @@
 #include <unistd.h>
 #include <sstream>
 #include <string>
-
+#include "Util.hpp"
 
 class Channel;
 class Client;
 // class Command;
-
-std::vector<std::string> CrlfSplit(std::string &line, std::string s)
-{
-	std::vector<std::string> tab;
-	std::string cmd_buf;
-	size_t start = 0;
-	size_t pos;
-
-	while ((pos = line.find(s)) != std::string::npos){
-		tab.push_back(line.substr(start, pos));
-		line = line.substr(pos + 2);
-	}
-	for (size_t i = 0; i < tab.size(); i++)
-	{
-		std::cout << "[[" <<  tab[i] << "]]" << std::endl;
-	}
-	return tab;
-}
-
-std::vector<std::string> split(std::string &line, char c)
-{
-	std::vector<std::string> tab;
-	std::string word_buf;
-	bool space = false;
-
-	for (int i = 0; i < (int)line.size(); i++)
-	{
-		if (line[i] == c && space == false)
-		{
-			space = true;
-			if (word_buf.size() > 0)
-				tab.push_back(word_buf);
-			word_buf.clear();
-		}
-		else
-		{
-			word_buf += line[i];
-			if (line[i] != c)
-				space = false;
-		}
-	}
-	if (word_buf.size() > 0)
-		tab.push_back(word_buf);
-	return tab;
-}
 
 class Server
 {
@@ -88,7 +43,6 @@ private:
 		_clientLen = sizeof(_clientAddr);
 		_clientFd = accept(_serverSocketFd, (struct sockaddr *)&_clientAddr, &_clientLen);
 		//TODO : accept 예외처리
-		//Client tmp(_clientFd);
 		_clientList.push_back(new Client(_clientFd));
 		std::cout << "client fd: " << _clientList.back()->getClientFd() << std::endl;
 		std::cout << "connect client\n";
@@ -106,7 +60,6 @@ private:
 		_pollClient[index].events = POLLIN;
 		if (index > _maxClient)
 			_maxClient = index;
-		//std::cout << "pollLet " << _pollLet << std::endl;
 		if (--_pollLet <= 0)
 			return (-1);
 		return (0);
@@ -166,8 +119,6 @@ public:
 	void check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		if (cmd_vec[0] == "NICK")
 			_command.nick(cmd_vec, _clientList, client);
-		else if (cmd_vec[0] == "USER")
-			_command.user(cmd_vec);
 		else if (cmd_vec[0] == "JOIN")
 			_command.join(cmd_vec, client, _channelList);
 		else if (cmd_vec[0] == "KICK")
@@ -180,8 +131,8 @@ public:
 			_command.part(cmd_vec);
 		else if (cmd_vec[0] == "QUIT")
 			_command.quit(cmd_vec);
-		else if (cmd_vec[0] == "WHOIS")
-			_command.whois(cmd_vec, client);
+		// else if (cmd_vec[0] == "WHOIS")
+		// 	_command.whois(cmd_vec, client);
 		else //미구현 커맨드 알림 또는 커맨드 무시
 			std::cout << "undefined cmd\n";
 	};
@@ -214,12 +165,11 @@ public:
 							  << _msgBuffer << std::endl;
 					std::cout << "--- endRecvMsgBuf --- " << std::endl;
 
-					std::vector<std::string> cmd = CrlfSplit(_msgBuffer, "\r\n");
+					std::vector<std::string> cmd = split(_msgBuffer, "\r\n");
 					// TODO : 명령어 순서대로 처리하는 함수 추가하기
-
+					print_stringVector(cmd);
 					if (_clientList[i]->getNickName() == "")
 					{
-						std::cout << "-------\n";
 						_command.welcome(cmd, _clientList[i], _clientList);
 					}
 					else
@@ -227,7 +177,7 @@ public:
 						std::vector<std::string>::iterator cmd_it = cmd.begin();
 						while (cmd_it != cmd.end())
 						{
-							std::vector<std::string> result = split(*cmd_it, ' ');
+							std::vector<std::string> result = split(*cmd_it, " ");
 							check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
 							cmd_it++;
 						}
@@ -245,13 +195,11 @@ public:
 		{
 			if (_clientList[i]->getMsgBuffer().empty() == false)
 			{ // send버퍼 있는 지 확인해서 있으면 send
-				// std::cout << "--- pollout ---" << std::endl;
 				std::string tmp = _clientList[i]->getMsgBuffer();
 				send(_pollClient[i].fd, tmp.c_str(), tmp.length(), 0);
 				std::cout << "sendMsg : " << tmp << std::endl;
 				tmp.clear();
 				_clientList[i]->setMsgBuffer("");
-				// std::cout << "--- endpollout ---" << std::endl;
 			}
 		}
 	}
@@ -264,7 +212,6 @@ public:
 			_pollLet = poll(_pollClient, _maxClient + index, -1); //반환값?
 			if (_pollLet == 0 || _pollLet == -1)
 				break;
-			//std::cout << "179" << std::endl;
 			// pollin 이벤트 받으면은 실행
 			if (_pollClient[0].revents & POLLIN)
 			{

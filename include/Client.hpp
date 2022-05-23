@@ -9,8 +9,11 @@ class Channel;
 class Client{
 	private :
 		std::string _nickName;
-        std::string stuff;//각종이름;//nick real username hostname 등..등.....
-		//TODO : 사용되는 이름 조사하기
+		std::string _userName;
+		std::string _hostName;
+		std::string _serverName;
+		std::string _realName;
+		//<username> <hostname> <servername> <realname>
 		int _clientFd;
         std::vector<Channel *> _myChannelList;
         std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
@@ -38,6 +41,25 @@ class Client{
 		{
 			return _nickName;
 		};
+		void setUser(std::string userName, std::string hostName, std::string serverName, std::string realName){
+			_userName = userName;
+			_hostName = hostName;
+			_serverName = serverName;
+			_realName = realName;
+		};
+		std::string getUserName(){
+			return _userName;
+		};
+		std::string getHostName(){
+			return _hostName;
+		};
+		std::string getServerName(){
+			return _serverName;
+		};
+		std::string getRealName(){
+			return _realName;
+		};
+
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();

@@ -3,17 +3,17 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+         #
+#    By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/05/22 15:29:02 by swang             #+#    #+#              #
-#    Updated: 2022/05/22 15:35:26 by swang            ###   ########.fr        #
+#    Updated: 2022/05/23 13:57:45 by jeonhyun         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = ircserv
 
 CXX = clang++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 
 
 SRC_DIR = src/
 
@@ -25,8 +25,6 @@ OBJS = $(SRCS:.cpp=.o)
 
 .cpp.o :
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-
 
 
 all : $(NAME)
