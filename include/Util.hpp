@@ -62,7 +62,7 @@ void print_stringVector(std::vector<std::string> v)
 	std::vector<std::string>::iterator it = v.begin();
 	while (it != v.end())
 	{
-		std::cout << "print vector: " << (*it) << std::endl;
+		std::cout << "[" << (*it) << "]" << std::endl;
 		it++;
 	}
 }
