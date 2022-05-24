@@ -108,19 +108,19 @@ public:
 			std::cout << "s1 : " << s[1] << "\n" << "닉네임규칙안맞음\n";
 			return;
 		}
-		
-		client->setMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
+
+		client->appendMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
 		client->setNickName(s[1]);
 		//중복 체크 ->응답
 		//닉네임 규칙 체크 ->응답
 
 		//맞으면 닉네임 바꾸고 응답 보내기
-		
+
 		std::cout << "i am nick\n";
 		print_clientList(clientList);
 
 	};																	   // NICK <parameter>
-	void user(std::vector<std::string> s, Client *client) { 
+	void user(std::vector<std::string> s, Client *client) {
 		client->setUser(s[1], s[2], s[3], appendStringColon(4, s));
 		std::cout << "user called" << std::endl;
 
@@ -138,7 +138,7 @@ public:
 			std::vector<Channel *>::iterator channelBegin = channelList.begin();
 			std::vector<Channel *>::iterator channelEnd = channelList.end();
 			std::vector<Channel *>::iterator findIter = findChannel(channelBegin, channelEnd, *it);
-			
+
 			if (findIter != channelList.end())
 			{
 				// 채널 객체가 이미 존재하는 경우
@@ -146,7 +146,7 @@ public:
 				client->addChannelList(*findIter);
 				std::cout << "채널에 추가됨\n";
 				//TODO: 채널접속시 채널에 접속해 있는 사람들에게 알림메세지
-				client->setMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() +  " JOIN " + (*findIter)->getChannelName() + "\r\n");
+				client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() +  " JOIN " + (*findIter)->getChannelName() + "\r\n");
 				//:이름 JOIN 채널명
 			}
 			else
@@ -157,12 +157,12 @@ public:
 				channelList.back()->addMyClientList(client);
 				// 클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
 				client->addChannelList(channelList.back());
-				client->setMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + channelList.back()->getChannelName() + "\r\n");
+				client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + channelList.back()->getChannelName() + "\r\n");
 			}
 			it++;
 		}
 		//채널의 클라이언트 리스트 돌면서 다 메세지 보내기
-		
+
 
 		print_channelList(channelList);
 
@@ -170,7 +170,7 @@ public:
 		//파싱해서 채널 이름 따오고
 		//서버.채널리스트에 없으면 채널 객체 만들어서 채널 리스트에 추가
 		//클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
-		
+
 		std::cout << "called" << s[0] << std::endl;
 	};
 	void kick(std::vector<std::string> s) {
@@ -180,7 +180,6 @@ public:
 	{
 		// privmsg <target> :text
 		std::vector<std::string> target = split(s[1], ",");
-		//TODO : 스플릿 변경
 		std::vector<std::string>::iterator targetIt = target.begin();
 		while (targetIt != target.end())
 		{
@@ -202,13 +201,13 @@ public:
 	};
 	void  personalMessage(std::string msg, std::string senderName, Client * receiver)
 	{
-		receiver->setMsgBuffer(":" + senderName + " PRIVMSG " + receiver->getNickName() + " " + msg + "\r\n");
+		receiver->appendMsgBuffer(":" + senderName + " PRIVMSG " + receiver->getNickName() + " " + msg + "\r\n");
 		std::cout << "fd : " << receiver->getClientFd() << std::endl;
 	};
 
 	void  channelPersonalMessage(std::string msg, std::string senderName, Client *client, std::string channelName)
 	{
-		client->setMsgBuffer(":" + senderName + " PRIVMSG " + channelName + " " + msg + "\r\n");
+		client->appendMsgBuffer(":" + senderName + " PRIVMSG " + channelName + " " + msg + "\r\n");
 		std::cout << "fd : " << client->getClientFd() << std::endl;
 	};
 
@@ -235,19 +234,19 @@ public:
 		//리스트에서 지우고
 		std::cout << "called" << s[0] << std::endl;
 	}; // QUIT [<Quit message>]
-	
+
 	/*
 	:irc.example.com 001 borja :Welcome to the Internet Relay Network borja!borja@polaris.cs.uchicago.edu
 	:irc.example.com 433 * borja :Nickname is already in use.
 	:irc.example.org 332 borja #cmsc23300 :A channel for CMSC 23300 students
-	
+
 	:<server> 311 <nick> <nick> <user> <host> * :<real name>
 	*/
-	
+
 	// void whois(std::vector<std::string> s, Client *client)
 	// {
-	// 	client->setMsgBuffer("311 " + client->getNickName() + " " + client->getNickName() + " ~" + client->getUserName() + " " + client->getServerName() + " * " + client->getRealName() + "\r\n");//todo~~
-		
+	// 	client->appendMsgBuffer("311 " + client->getNickName() + " " + client->getNickName() + " ~" + client->getUserName() + " " + client->getServerName() + " * " + client->getRealName() + "\r\n");//todo~~
+
 	// 	//ircname, 서버 어딘지, ~()@ Endofwhois
 	// 	std::cout << "called" << s[0] << std::endl;
 	// };
@@ -286,7 +285,8 @@ public:
 			}
 			cmd_it++;
 		}
-		client->setMsgBuffer("001 " + client->getNickName() + " :Welcome to the Internet Relay Network " + client->getNickName() + "\r\n");
+		// print_clientList(clientList);
+		client->appendMsgBuffer("001 " + client->getNickName() + " :Welcome to the Internet Relay Network " + client->getNickName() + "\r\n");
 		std::cout << "welcome\n";
 	}
 };
