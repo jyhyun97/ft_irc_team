@@ -14,26 +14,36 @@ class Client{
 		std::string _serverName;
 		std::string _realName;
 		int _clientFd;
-        std::vector<Channel *> _myChannelList;
-        std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
-    public :
-		Client(int clientFd) : _clientFd(clientFd){
-		}
-		std::string getMsgBuffer(){
+		std::vector<std::string> _myChannelList;
+		std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
+		// Server *server;
+	public :
+		Client(int clientFd) : _clientFd(clientFd)
+		{}
+		std::string getMsgBuffer()
+		{
 			return _msgBuffer;
 		};
-		void clearMsgBuffer(){
+		bool isRegist()
+		{
+			if (_nickName == "" || _userName == "" || _hostName == "" || _realName == "" || _serverName == "")
+				return (false);
+			return(true);
+		}
+		void clearMsgBuffer()
+		{
 			_msgBuffer = "";
 		};
-		void appendMsgBuffer(std::string msgBuffer){
+		void appendMsgBuffer(std::string msgBuffer)
+		{
 			_msgBuffer.append(msgBuffer);
 		};
 		int getClientFd(){
 			return _clientFd;
 		}
-		void addChannelList(Channel *channel)
+		void addChannelList(std::string channelName)
 		{
-			_myChannelList.push_back(channel);
+			_myChannelList.push_back(channelName);
 		}
 		void setNickName(std::string nickName)
 		{

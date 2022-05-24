@@ -12,17 +12,20 @@
 #include <unistd.h>
 #include <sstream>
 #include <string>
+#include <map>
 #include "Util.hpp"
 
 class Channel;
 class Client;
-// class Command;
+class Command;
 
 class Server
 {
 private:
-	std::vector<Channel *> _channelList;					//채널목록;
-	std::vector<Client *> _clientList;					//전체 클라이언트목록;
+	std::map<int, Client *> _clientList;
+	std::map<std::string, Channel *> _channelList;
+	// std::vector<Channel *> _channelList;					//채널목록;
+	// std::vector<Client *> _clientList;					//전체 클라이언트목록;
 	int _port;											//포트 번호
 	std::string _password;								// 서버 비밀번호
 	std::string _msgBuffer;									// 클라이언트가 보내는 메세지 버퍼;
@@ -43,8 +46,8 @@ private:
 		_clientLen = sizeof(_clientAddr);
 		_clientFd = accept(_serverSocketFd, (struct sockaddr *)&_clientAddr, &_clientLen);
 		//TODO : accept 예외처리
-		_clientList.push_back(new Client(_clientFd));
-		std::cout << "client fd: " << _clientList.back()->getClientFd() << std::endl;
+		_clientList.insert(std::pair<int, Client *>(_clientFd, new Client(_clientFd)));
+		std::cout << "client fd: " << _clientList.find(_clientFd)->first << std::endl;
 		std::cout << "connect client\n";
 		//비번 확인
 
@@ -78,16 +81,45 @@ public:
 		_maxClient = 0;
 		_pollClient[0].fd = _serverSocketFd;
 		_pollClient[0].events = POLLIN;//읽을 데이터가 있다는 이벤트
+		_command = Command(this);
 
 		// pollifd 구조체의 모든 fd를 -1로 초기화
 		for (int i = 1; i < OPEN_MAX; i++){
 			_pollClient[i].fd = -1;
 		}
 		//Client a(_serverSocketFd);//DUMMY
-		_clientList.push_back(new Client(_serverSocketFd));
+		// 인덱스로 접근하는거 고쳐야함
+
 		//TODO : 생성자에서 try catch를 해도 되는가?
 	}
 	~Server(){};	//소멸자
+
+	std::map<int, Client *> getClientList() {
+		return _clientList;
+	};
+
+	std::map<std::string, Channel *> getChannelList() {
+		return _channelList;
+	};
+
+	Client *findClient(int fd) {
+		return _clientList.find(fd)->second;
+	};
+
+	Client *findClient(std::string nick) {
+		std::map<int, Client *>::iterator it = _clientList.begin();
+		for (it; it != _clientList.end(); it++)
+		{
+			if (it->second->getNickName() == nick)
+				return it->second;
+		}
+		return NULL;
+	};
+
+	Channel *findChannel(std::string name) {
+		return _channelList.find(name)->second;
+	};
+
 	// 각 명령어 함수;
 	// 클라이언트 관리 함수(get / setClient);
 	// 채널 관리 함수(get / setChannel);
@@ -117,7 +149,7 @@ public:
 	};
 	void check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		if (cmd_vec[0] == "NICK")
-			_command.nick(cmd_vec, _clientList, client);
+			_command.nick(cmd_vec, client);
 		else if (cmd_vec[0] == "JOIN")
 			_command.join(cmd_vec, client, _channelList);
 		else if (cmd_vec[0] == "KICK")
@@ -139,14 +171,13 @@ public:
 
 	void addChannelList(std::string channelName)
 	{
-		_channelList.push_back(new Channel(channelName));
+		_channelList.insert(std::pair<std::string, Channel *>(channelName, new Channel(channelName)));
 	}
 	void relayEvent()
 	{
 		char buf[512]; //
 		for (int i = 1; i <= _maxClient; i++)
 		{
-
 			if (_pollClient[i].fd < 0)
 				continue;
 			if (_pollClient[i].revents & (POLLIN))
@@ -164,20 +195,23 @@ public:
 							  << _msgBuffer << std::endl;
 					std::cout << "--- endRecvMsgBuf --- " << std::endl;
 
+					Client * tmp = (_clientList.find(_pollClient[i].fd))->second;
 					std::vector<std::string> cmd = split(_msgBuffer, "\r\n");
 					// TODO : 명령어 순서대로 처리하는 함수 추가하기
 					print_stringVector(cmd);
-					if (_clientList[i]->getNickName() == "")
+					// 클라이언트가 등록이 안되어있을 때
+					if (!tmp->isRegist())
 					{
-						_command.welcome(cmd, _clientList[i], _clientList);
+						_command.welcome(cmd, (_clientList.find(_pollClient[i].fd))->second, _clientList);
 					}
 					else
 					{
+						// 이미 등록된 클라이언트에서 이벤트 발생
 						std::vector<std::string>::iterator cmd_it = cmd.begin();
 						while (cmd_it != cmd.end())
 						{
 							std::vector<std::string> result = split(*cmd_it, " ");
-							check_cmd(result, _clientList[i]); //클라이언트를 가지고 갈 것?
+							check_cmd(result, tmp); //클라이언트를 가지고 갈 것?
 							cmd_it++;
 						}
 					}
@@ -190,16 +224,19 @@ public:
 				exit(3);
 			}
 		}
-		for (int i = 1; i <= _maxClient; i++)
+		std::map<int, Client *>::iterator it = _clientList.begin();
+		int i = 1;
+		for (it; it != _clientList.end(); it++)
 		{
-			if (_clientList[i]->getMsgBuffer().empty() == false)
+			if (it->second->getMsgBuffer().empty() == false)
 			{ // send버퍼 있는 지 확인해서 있으면 send
-				std::string tmp = _clientList[i]->getMsgBuffer();
-				send(_pollClient[i].fd, tmp.c_str(), tmp.length(), 0);
-				std::cout << "sendMsg : " << tmp << std::endl;
-				tmp.clear();
-				_clientList[i]->clearMsgBuffer();
+				std::string str = it->second->getMsgBuffer();
+				send(_pollClient[i].fd, str.c_str(), str.length(), 0);
+				std::cout << "sendMsg : " << str << std::endl;
+				str.clear();
+				it->second->clearMsgBuffer();
 			}
+			i++;
 		}
 	}
 

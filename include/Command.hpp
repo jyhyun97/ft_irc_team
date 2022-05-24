@@ -2,9 +2,11 @@
 #define COMMAND_HPP
 
 #include <vector>
+#include <map>
 #include "Channel.hpp"
 #include "Client.hpp"
 #include "Command.hpp"
+#include "Server.hpp"
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -15,31 +17,8 @@
 #include <string>
 #include "Util.hpp"
 
-class Server;
+// class Server;
 
-std::vector<Channel *>::iterator findChannel(std::vector<Channel *>::iterator begin, std::vector<Channel *>::iterator end, std::string item)
-{
-	std::vector<Channel *>::iterator it = begin;
-	while (it != end)
-	{
-		if ((*it)->getChannelName() == item)
-			return (it);
-		it++;
-	}
-	return (end);
-}
-
-std::vector<Client *>::iterator findClient(std::vector<Client *>::iterator begin, std::vector<Client *>::iterator end, std::string item)
-{
-	std::vector<Client *>::iterator it = begin;
-	while (it != end)
-	{
-		if ((*it)->getNickName() == item)
-			return (it);
-		it++;
-	}
-	return (end);
-}
 // ERR_NONICKNAMEGIVEN             ERR_ERRONEUSNICKNAME
 // ERR_NICKNAMEINUSE               ERR_NICKCOLLISION
 
@@ -67,13 +46,15 @@ private:
 		else
 			return false;
 	};
-	bool isDuplication(std::string s, std::vector<Client *> &clientList)
+	bool isDuplication(std::string s, std::map<int, Client *> clientList)
 	{
 		// clientList 돌면서 s랑 똑같은 게 있는 지 찾아서 t/f 반환
-		for (int i = 0; i < (int)(clientList.size()); i++)
+		std::map<int, Client *>::iterator it = clientList.begin();
+		while (it != clientList.end())
 		{
-			if (clientList[i]->getNickName() == s)
+			if (it->second->getNickName() == s)
 				return true;
+			it++;
 		}
 		return false;
 	}
@@ -90,12 +71,14 @@ private:
 		}
 		return true;
 	}
-
+	Server *_server;
 public:
-	void nick(std::vector<std::string> s, std::vector<Client *> &clientList, Client *client)
+	Command(Server *server){
+		_server = server;
+	};
+	void nick(std::vector<std::string> s, Client *client)
 	{
-
-		if (isDuplication(s[1], clientList))
+		if (isDuplication(s[1], _server->getClientList()))
 		{
 			std::cout << "nick dup\n";
 			// 변경시 중복이면 중복프로토콜메시지(닉변경실패)
@@ -103,8 +86,6 @@ public:
 		}
 		if (!nickValidate(s[1]))
 		{
-			if (s[1].find('\r'))
-				std::cout << "캐리지리턴 포함" << std::endl;
 			std::cout << "s1 : " << s[1] << "\n" << "닉네임규칙안맞음\n";
 			return;
 		}
@@ -115,17 +96,13 @@ public:
 		//닉네임 규칙 체크 ->응답
 
 		//맞으면 닉네임 바꾸고 응답 보내기
-
-		std::cout << "i am nick\n";
-		print_clientList(clientList);
-
 	};																	   // NICK <parameter>
 	void user(std::vector<std::string> s, Client *client) {
 		client->setUser(s[1], s[2], s[3], appendStringColon(4, s));
 		std::cout << "user called" << std::endl;
 
 	}; // USER <username> <hostname> <servername> <realname>
-	void join(std::vector<std::string> s, Client *client, std::vector<Channel *> &channelList)
+	void join(std::vector<std::string> s, Client *client)
 	{
 		// JOIN ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] ) / "0"
 		// JOIN #foo,#bar
@@ -135,48 +112,53 @@ public:
 		{
 			//클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신//join
 
-			std::vector<Channel *>::iterator channelBegin = channelList.begin();
-			std::vector<Channel *>::iterator channelEnd = channelList.end();
-			std::vector<Channel *>::iterator findIter = findChannel(channelBegin, channelEnd, *it);
+			// std::vector<Channel *>::iterator channelBegin = channelList.begin();
+			// std::vector<Channel *>::iterator channelEnd = channelList.end();
+			// std::vector<Channel *>::iterator findIter = findChannel(channelBegin, channelEnd, *it);
 
-			if (findIter != channelList.end())
+			std::map<std::string, Channel *>::iterator findChannelIt = _server->getChannelList().find(*it);
+			std::string channelName = (*findChannelIt).second->getChannelName();
+
+			if (findChannelIt != _server->getChannelList().end())
 			{
 				// 채널 객체가 이미 존재하는 경우
-				(*findIter)->addMyClientList(client);
-				client->addChannelList(*findIter);
+				(*findChannelIt).second->addMyClientList(client->getClientFd());
+				client->addChannelList(channelName);
 				std::cout << "채널에 추가됨\n";
 				//TODO: 채널접속시 채널에 접속해 있는 사람들에게 알림메세지
-				client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() +  " JOIN " + (*findIter)->getChannelName() + "\r\n");
+				client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() +  " JOIN " + channelName + "\r\n");
 				//:이름 JOIN 채널명
 			}
 			else
 			{
 				// 새 채널 만들기; 서버.채널리스트에(( 추가))
-				channelList.push_back(new Channel(*it));
+
+				_server->addChannelList(channelName);
 				// 위에서 생성된 채널 클래스 객체에 유저 추가
-				channelList.back()->addMyClientList(client);
+				_server->findChannel(channelName)->addMyClientList(client->getClientFd());
+
+
 				// 클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
-				client->addChannelList(channelList.back());
-				client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + channelList.back()->getChannelName() + "\r\n");
+				client->addChannelList(channelName);
+
+				client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + channelName + "\r\n");
 			}
 			it++;
 		}
 		//채널의 클라이언트 리스트 돌면서 다 메세지 보내기
 
 
-		print_channelList(channelList);
+		// print_channelList(channelList);
 
 		// //connect 127.0.0.1 6667 0000
 		//파싱해서 채널 이름 따오고
 		//서버.채널리스트에 없으면 채널 객체 만들어서 채널 리스트에 추가
 		//클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
-
-		std::cout << "called" << s[0] << std::endl;
 	};
 	void kick(std::vector<std::string> s) {
 		std::cout << "called" << s[0] << std::endl;
 	}; // KICK <channel> <user> [<comment>]//KICK <channel> <user> [<comment>]
-	void privmsg(std::vector<std::string> s, Client *client, std::vector<Client *> clientList, std::vector<Channel *> channelList)
+	void privmsg(std::vector<std::string> s, Client *client)
 	{
 		// privmsg <target> :text
 		std::vector<std::string> target = split(s[1], ",");
@@ -185,15 +167,16 @@ public:
 		{
 			if((*targetIt)[0] == '#')
 			{
-				std::vector<Channel *>::iterator channelIt = findChannel(channelList.begin(), channelList.end(), *targetIt);
+
+				// std::vector<Channel *>::iterator channelIt = findChannel(channelList.begin(), channelList.end(), *targetIt);
 				//TODO :find 실패시 예외처리
-				channelMessage(appendStringColon(2, s), client, *channelIt);
+				channelMessage(appendStringColon(2, s), client, _server->findChannel(*targetIt));
 			}
 			else
 			{
-				std::vector<Client *>::iterator clientIt = findClient(clientList.begin(), clientList.end(), *targetIt);
+				// std::vector<Client *>::iterator clientIt = findClient(clientList.begin(), clientList.end(), *targetIt);
 				//TODO :find 실패시 예외처리
-				personalMessage(appendStringColon(2, s), client->getNickName(), *clientIt);
+				personalMessage(appendStringColon(2, s), client->getNickName(), _server->findClient(*targetIt));
 			}
 			targetIt++;
 		}
@@ -211,14 +194,14 @@ public:
 		std::cout << "fd : " << client->getClientFd() << std::endl;
 	};
 
-	void channelMessage(std::string msg, Client *client, Channel * channel)
+	void channelMessage(std::string msg, Client *client, Channel *channel)
 	{
-		std::vector<Client *> clients = channel->getMyClientList();
-		std::vector<Client *>::iterator clientsIt = clients.begin();
+		std::vector<int> clients = channel->getMyClientFdList();
+		std::vector<int>::iterator clientsIt = clients.begin();
 		while(clientsIt != clients.end())
 		{
-			if (client->getClientFd() != (*clientsIt)->getClientFd())
-				channelPersonalMessage(msg, client->getNickName(), *clientsIt, channel->getChannelName());
+			if (client->getClientFd() != (*clientsIt))
+				channelPersonalMessage(msg, client->getNickName(), _server->findClient(*clientsIt), channel->getChannelName());
 			clientsIt++;
 		}
 	};																   // PRIVMSG <msgtarget> <text to be sent>
@@ -250,7 +233,7 @@ public:
 	// 	//ircname, 서버 어딘지, ~()@ Endofwhois
 	// 	std::cout << "called" << s[0] << std::endl;
 	// };
-	void welcome(std::vector<std::string> cmd, Client *client, std::vector<Client *> clientList)
+	void welcome(std::vector<std::string> cmd, Client *client, std::map<int, Client *> clientList)
 	{
 		//닉 체크하고 최초 닉네임 설정..
 		//TODO : clientList 길이 체크하고 3개 명령어 다 처리한 후 welcome 전송
