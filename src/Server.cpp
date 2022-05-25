@@ -1,16 +1,17 @@
 #include "../include/Server.hpp"
-#include <signal.h>
+// #include <signal.h>
 
-#include <netinet/tcp.h>
-
+// #include <netinet/tcp.h>
 
 
 int Server::pollingEvent(int &index){
 	_clientLen = sizeof(_clientAddr);
 	_clientFd = accept(_serverSocketFd, (struct sockaddr *)&_clientAddr, &_clientLen);
 
-	// fcntl(_clientFd, F_SETFL, O_NONBLOCK);
-
+	if (_clientFd < 0) {
+		std::cerr << "Error accepting client" << std::endl;
+		return -1;
+	}
 
 	//TODO : accept 예외처리
 	_clientList.insert(std::pair<int, Client *>(_clientFd, new Client(_clientFd)));
@@ -91,16 +92,25 @@ int Server::sock_init(){
 	_serverSocketAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	_serverSocketAddr.sin_port = htons(_port);
 
-	//sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-	//master-> setsockopt(this->servSock, SOL_SOCKET, SO_REUSEADDR, (void *)&option, optlen);
-	int option = 1;
-	setsockopt(_serverSocketFd, IPPROTO_TCP, TCP_NODELAY, (void *)&option, sizeof(option));
+	// int option = 1;
+	// setsockopt(_serverSocketFd, IPPROTO_TCP, TCP_NODELAY, (void *)&option, sizeof(option));
 	//setsockopt(_serverSocketFd, IPPROTO_TCP, TCP_NODELAY, (const sockaddr *)&_serverSocketAddr, sizeof(_serverSocketAddr));
 
+	// SO_REUSEADDR time-wait 중인 소켓에 재할당 가능하도록 설정
+	int optval = true;
+	socklen_t optlen = sizeof(optval);
+	setsockopt(_serverSocketFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optval, optlen);
+
 	if (bind(_serverSocketFd, (const sockaddr *)&_serverSocketAddr, sizeof(_serverSocketAddr)))
+	{
+		std::cerr << "Error binding socket" << std::endl;
 		exit(1);
+	}
 	if (listen(_serverSocketFd, 15) == -1)
+	{
+		std::cerr << "Error listening socket" << std::endl;
 		exit(3);
+	}
 	std::cout << "listening" << std::endl;
 	return (0);
 //TODO : 에러처리 나중에 어떻게 할 지 생각할 것
@@ -202,10 +212,7 @@ int Server::execute(){
 	//signal(13, SIG_IGN);
 	while (42)
 	{
-		std::cout << "before poll: \n";
 		_pollLet = poll(_pollClient, _maxClient + index, -1); //반환값?
-		std::cout << "pollLet : " << _pollLet << std::endl;
-		std::cout << "after poll: \n";
 		if (_pollLet == 0 || _pollLet == -1)
 			break;
 		// pollin 이벤트 받으면은 실행
