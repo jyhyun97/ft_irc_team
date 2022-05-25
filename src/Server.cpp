@@ -1,15 +1,22 @@
 #include "../include/Server.hpp"
 #include <signal.h>
 
+#include <netinet/tcp.h>
+
+
+
 int Server::pollingEvent(int &index){
 	_clientLen = sizeof(_clientAddr);
 	_clientFd = accept(_serverSocketFd, (struct sockaddr *)&_clientAddr, &_clientLen);
+
+	// fcntl(_clientFd, F_SETFL, O_NONBLOCK);
+
+
 	//TODO : accept 예외처리
 	_clientList.insert(std::pair<int, Client *>(_clientFd, new Client(_clientFd)));
 	std::cout << "client fd: " << _clientList.find(_clientFd)->first << std::endl;
 	std::cout << "connect client\n";
 	//비번 확인
-
 	for (index = 1; index < OPEN_MAX; index++)
 	{
 		if (_pollClient[index].fd < 0)
@@ -28,12 +35,11 @@ int Server::pollingEvent(int &index){
 }
 
 Server::Server(int port, std::string password) : _command(this){
-	sock_init();
-	//poll_init();
 	_pollLet = 0;
 	_maxClient = 0;
 	_port = port;
 	_password = password;
+	sock_init();
 	_pollClient[0].fd = _serverSocketFd;
 	_pollClient[0].events = POLLIN;//읽을 데이터가 있다는 이벤트
 
@@ -85,9 +91,15 @@ int Server::sock_init(){
 	_serverSocketAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	_serverSocketAddr.sin_port = htons(_port);
 
+	//sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+	//master-> setsockopt(this->servSock, SOL_SOCKET, SO_REUSEADDR, (void *)&option, optlen);
+	int option = 1;
+	setsockopt(_serverSocketFd, IPPROTO_TCP, TCP_NODELAY, (void *)&option, sizeof(option));
+	//setsockopt(_serverSocketFd, IPPROTO_TCP, TCP_NODELAY, (const sockaddr *)&_serverSocketAddr, sizeof(_serverSocketAddr));
+
 	if (bind(_serverSocketFd, (const sockaddr *)&_serverSocketAddr, sizeof(_serverSocketAddr)))
 		exit(1);
-	if (listen(_serverSocketFd, 5) == -1)
+	if (listen(_serverSocketFd, 15) == -1)
 		exit(3);
 	std::cout << "listening" << std::endl;
 	return (0);
@@ -172,18 +184,16 @@ void Server::relayEvent()
 		}
 	}
 	std::map<int, Client *>::iterator it = _clientList.begin();
-	int i = 1;
 	for (; it != _clientList.end(); it++)
 	{
 		if (it->second->getMsgBuffer().empty() == false)
 		{ // send버퍼 있는 지 확인해서 있으면 send
 			std::string str = it->second->getMsgBuffer();
-			send(_pollClient[i].fd, str.c_str(), str.length(), 0);
+			send(it->first, str.c_str(), str.length(), 0);
 			std::cout << "sendMsg : " << str << std::endl;
 			str.clear();
 			it->second->clearMsgBuffer();
 		}
-		i++;
 	}
 }
 

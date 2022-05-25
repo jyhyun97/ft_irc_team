@@ -47,10 +47,7 @@ bool Command::nickValidate(std::string s)
     }
     return true;
 }
-// Command::Command(){};
-// Command::Command(Server &server){
-//     _server = &server;
-// }
+
 Command::Command(Server *server){
     _server = server;
 }
@@ -86,7 +83,7 @@ void Command::user(std::vector<std::string> s, Client *client)
 void Command::join(std::vector<std::string> s, Client *client)
 {
     // JOIN ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] ) / "0"
-    // JOIN #foo,#bar
+    // [JOIN] [#foo,#bar]
     std::vector<std::string> joinChannel = split(s[1], ",");
     std::vector<std::string>::iterator it = joinChannel.begin();
     while (it != joinChannel.end())
@@ -98,11 +95,11 @@ void Command::join(std::vector<std::string> s, Client *client)
         // std::vector<Channel *>::iterator findIter = findChannel(channelBegin, channelEnd, *it);
 
         std::map<std::string, Channel *>::iterator findChannelIt = _server->getChannelList().find(*it);
-        std::string channelName = (*findChannelIt).second->getChannelName();
 
         if (findChannelIt != _server->getChannelList().end())
         {
             // 채널 객체가 이미 존재하는 경우
+            std::string channelName = (*findChannelIt).second->getChannelName();
             (*findChannelIt).second->addMyClientList(client->getClientFd());
             client->addChannelList(channelName);
             std::cout << "채널에 추가됨\n";
@@ -113,15 +110,12 @@ void Command::join(std::vector<std::string> s, Client *client)
         else
         {
             // 새 채널 만들기; 서버.채널리스트에(( 추가))
-
-            _server->addChannelList(channelName);
+            _server->addChannelList(*it);
             // 위에서 생성된 채널 클래스 객체에 유저 추가
-            _server->findChannel(channelName)->addMyClientList(client->getClientFd());
-
+            _server->findChannel(*it)->addMyClientList(client->getClientFd());
             // 클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
-            client->addChannelList(channelName);
-
-            client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + channelName + "\r\n");
+            client->addChannelList(*it);
+            client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + *it + "\r\n");
         }
         it++;
     }
