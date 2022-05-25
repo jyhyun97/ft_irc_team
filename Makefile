@@ -3,34 +3,40 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+         #
+#    By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/05/22 15:29:02 by swang             #+#    #+#              #
-#    Updated: 2022/05/23 13:57:45 by jeonhyun         ###   ########.fr        #
+#    Updated: 2022/05/25 14:40:26 by hyahn            ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = ircserv
 
 CXX = clang++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+INC = -Iinclude/
 
 SRC_DIR = src/
 
-SRC_NAME = main.cpp
+SRC_NAME = main.cpp\
+			Channel.cpp\
+			Client.cpp\
+			Server.cpp\
+			Command.cpp\
+			Util.cpp
 
 SRCS = $(addprefix $(SRC_DIR), $(SRC_NAME))
 
 OBJS = $(SRCS:.cpp=.o)
 
 .cpp.o :
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INC) -c $< -o $@
 
 
 all : $(NAME)
 
 $(NAME) : $(OBJS)
-		$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
+		$(CXX) $(CXXFLAGS) $(INC) $(OBJS) -o $(NAME)
 
 clean :
 		rm -rf $(OBJS)
