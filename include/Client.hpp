@@ -14,66 +14,25 @@ class Client{
 		std::string _serverName;
 		std::string _realName;
 		int _clientFd;
-        std::vector<Channel *> _myChannelList;
-        std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
-    public :
-		Client(int clientFd) : _clientFd(clientFd){
-		}
-		std::string getMsgBuffer(){
-			return _msgBuffer;
-		};
-		void clearMsgBuffer(){
-			_msgBuffer = "";
-		};
-		void appendMsgBuffer(std::string msgBuffer){
-			_msgBuffer.append(msgBuffer);
-		};
-		int getClientFd(){
-			return _clientFd;
-		}
-		void addChannelList(Channel *channel)
-		{
-			_myChannelList.push_back(channel);
-		}
-		void setNickName(std::string nickName)
-		{
-			_nickName = nickName;
-		};
-		std::string getNickName()
-		{
-			return _nickName;
-		};
-		void setUser(std::string userName, std::string hostName, std::string serverName, std::string realName){
-			_userName = userName;
-			_hostName = hostName;
-			_serverName = serverName;
-			_realName = realName;
-		};
-		std::string getUserName(){
-			return _userName;
-		};
-		std::string getHostName(){
-			return _hostName;
-		};
-		std::string getServerName(){
-			return _serverName;
-		};
-		std::string getRealName(){
-			return _realName;
-		};
-
-		void DebugPrint(){
-			std::cout << "nickName : " << _nickName << std::endl;
-			std::cout << "userName : " << _userName << std::endl;
-			std::cout << "hostName : " << _hostName << std::endl;
-			std::cout << "serverName : " << _serverName << std::endl;
-			std::cout << "realName : " << _realName << std::endl;
-			std::cout << "clientFd : " << _clientFd << std::endl;
-			std::cout << "myChannelList : " << std::endl;
-			// print_channelList(_myChannelList);
-			std::cout << "msgBuffer : " << _msgBuffer << std::endl;
-		};
-
+		std::vector<std::string> _myChannelList;
+		std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
+		// Server *server;
+	public :
+		Client(int clientFd);
+		std::string getMsgBuffer();
+		bool isRegist();
+		void clearMsgBuffer();
+		void appendMsgBuffer(std::string msgBuffer);
+		int getClientFd();
+		void addChannelList(std::string channelName);
+		void setNickName(std::string nickName);
+		std::string getNickName();
+		void setUser(std::string userName, std::string hostName, std::string serverName, std::string realName);
+		std::string getUserName();
+		std::string getHostName();
+		std::string getServerName();
+		std::string getRealName();
+		void DebugPrint();
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();
