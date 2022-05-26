@@ -33,6 +33,9 @@ class Client{
 		std::string getServerName();
 		std::string getRealName();
 		void DebugPrint();
+		std::vector<std::string> &getMyChannelList();
+		std::vector<std::string>::iterator findChannel(std::string item);
+		void removeChannelList(std::vector<std::string>::iterator it);
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();

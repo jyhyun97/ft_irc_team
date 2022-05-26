@@ -128,9 +128,9 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 	else if (cmd_vec[0] == "PASS")
 		_command.pass(cmd_vec);
 	else if (cmd_vec[0] == "PART")
-		_command.part(cmd_vec);
+		_command.part(cmd_vec, client);
 	else if (cmd_vec[0] == "QUIT")
-		_command.quit(cmd_vec);
+		_command.quit(cmd_vec, client);
 	// else if (cmd_vec[0] == "WHOIS")
 	// 	_command.whois(cmd_vec, client);
 	else //미구현 커맨드 알림 또는 커맨드 무시
@@ -200,7 +200,7 @@ void Server::relayEvent()
 		{ // send버퍼 있는 지 확인해서 있으면 send
 			std::string str = it->second->getMsgBuffer();
 			send(it->first, str.c_str(), str.length(), 0);
-			std::cout << "sendMsg : " << str << std::endl;
+			std::cout << "sendMsg to " << it->first << " : " << str << std::endl;
 			str.clear();
 			it->second->clearMsgBuffer();
 		}

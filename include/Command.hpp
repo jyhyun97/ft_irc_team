@@ -29,6 +29,7 @@ private:
 	bool isDuplication(std::string s, std::map<int, Client *> clientList);
 	bool nickValidate(std::string s);
 	Server *_server;
+	std::string makePrefix(std::string nick, std::string user, std::string server);
 public:
 	// Command();
 	//Command(Server &server);
@@ -44,9 +45,10 @@ public:
 	void  channelPersonalMessage(std::string msg, std::string senderName, Client *client, std::string channelName);
 
 	void channelMessage(std::string msg, Client *client, Channel *channel);																   // PRIVMSG <msgtarget> <text to be sent>
+	void leaveMessage(std::string msg, Client *client, Channel *channel);
 	void pass(std::vector<std::string> s); // PASS <password>
-	void part(std::vector<std::string> s); // PART <channel> *( "," <channel> ) [ <Part Message> ]
-	void quit(std::vector<std::string> s); // QUIT [<Quit message>]
+	void part(std::vector<std::string> s, Client *client); // PART <channel> *( "," <channel> ) [ <Part Message> ]
+	void quit(std::vector<std::string> s, Client *client); // QUIT [<Quit message>]
 
 	/*
 	:irc.example.com 001 borja :Welcome to the Internet Relay Network borja!borja@polaris.cs.uchicago.edu

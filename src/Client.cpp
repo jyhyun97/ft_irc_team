@@ -8,12 +8,38 @@ std::string Client::getMsgBuffer()
 	return _msgBuffer;
 }
 
+
+std::vector<std::string>::iterator Client::findChannel(std::string item)
+{
+	std::vector<std::string>::iterator it = _myChannelList.begin();
+	while (it != _myChannelList.end())
+	{
+		if ((*it) == item)
+			return (it);
+		it++;
+	}
+	return (_myChannelList.end());
+}
+
+void Client::removeChannelList(std::vector<std::string>::iterator it)
+{
+	_myChannelList.erase(it);
+	// if 이레이즈 실패시 에러처리?
+}
+
 bool Client::isRegist()
 {
 	if (_nickName == "" || _userName == "" || _hostName == "" || _realName == "" || _serverName == "")
 		return (false);
 	return(true);
 }
+
+std::vector<std::string> & Client::getMyChannelList()
+{
+	return(_myChannelList);
+}
+
+
 
 void Client::clearMsgBuffer()
 {

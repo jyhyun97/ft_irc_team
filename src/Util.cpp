@@ -1,5 +1,9 @@
 #include "../include/Util.hpp"
 
+
+
+
+
 std::string appendStringColon(size_t startIndex, std::vector<std::string> msg)
 {
 	std::string result = "";
