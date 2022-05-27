@@ -64,6 +64,11 @@ std::map<int, Client *> &Server::getClientList() {
 	return _clientList;
 }
 
+std::string Server::getPass()
+{
+	return _password;
+}
+
 std::map<std::string, Channel *> &Server::getChannelList() {
 	return _channelList;
 }
@@ -122,11 +127,11 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 	else if (cmd_vec[0] == "JOIN")
 		_command.join(cmd_vec, client);
 	else if (cmd_vec[0] == "KICK")
-		_command.kick(cmd_vec);
+		_command.kick(cmd_vec, client);
 	else if (cmd_vec[0] == "PRIVMSG")
 		_command.privmsg(cmd_vec, client);
-	else if (cmd_vec[0] == "PASS")
-		_command.pass(cmd_vec);
+	// else if (cmd_vec[0] == "PASS")
+	// 	_command.pass(cmd_vec, client);
 	else if (cmd_vec[0] == "PART")
 		_command.part(cmd_vec, client);
 	else if (cmd_vec[0] == "QUIT")
@@ -137,9 +142,9 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		std::cout << "undefined cmd\n";
 }
 
-void Server::addChannelList(std::string channelName)
+void Server::addChannelList(std::string channelName, int fd)
 {
-	_channelList.insert(std::pair<std::string, Channel *>(channelName, new Channel(channelName)));
+	_channelList.insert(std::pair<std::string, Channel *>(channelName, new Channel(channelName, fd)));
 }
 
 void Server::relayEvent()
@@ -162,6 +167,7 @@ void Server::relayEvent()
 				_msgBuffer = std::string(buf);
 				std::cout << "--- recvMsgBuf --- \n"
 							<< _msgBuffer << std::endl;
+				std::cout << "pollfd : " << _pollClient[i].fd << std::endl;
 				std::cout << "--- endRecvMsgBuf --- " << std::endl;
 
 				Client * tmp = (_clientList.find(_pollClient[i].fd))->second;

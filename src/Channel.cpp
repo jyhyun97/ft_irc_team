@@ -1,7 +1,18 @@
 #include "../include/Channel.hpp"
 
-Channel::Channel(std::string channelName) : _channelName(channelName){};
+Channel::Channel(std::string channelName, int fd) : _operator(fd), _channelName(channelName){};
 Channel::~Channel(){};
+int Channel::getMyOperator()
+{
+	return _operator;
+};
+
+void Channel::setMyOperator(int fd)
+{
+	_operator = fd;
+	return ;
+}
+
 std::string Channel::getChannelName() { return (_channelName); };
 std::vector<int> Channel::getMyClientFdList()
 {
@@ -11,6 +22,9 @@ void Channel::addMyClientList(int fd)
 {
 	_myClientFdList.push_back(fd);
 };
+
+
+
 
 void Channel::removeClientList(int fd)
 {

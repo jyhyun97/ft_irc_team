@@ -57,7 +57,7 @@ public:
 	Client *findClient(int fd);
 	Client *findClient(std::string nick);
 	Channel *findChannel(std::string name);
-
+	std::string getPass();
 	// 각 명령어 함수;
 	// 클라이언트 관리 함수(get / setClient);
 	// 채널 관리 함수(get / setChannel);
@@ -73,7 +73,7 @@ public:
 	int sock_init();
 	void check_cmd(std::vector<std::string> cmd_vec, Client *client);
 
-	void addChannelList(std::string channelName);
+	void addChannelList(std::string channelName, int fd);
 	void relayEvent();
 
 	int execute(); // 소켓통신 실행함수();

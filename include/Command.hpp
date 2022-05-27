@@ -38,7 +38,7 @@ public:
 	void nick(std::vector<std::string> s, Client *client);																	   // NICK <parameter>
 	void user(std::vector<std::string> s, Client *client);// USER <username> <hostname> <servername> <realname>
 	void join(std::vector<std::string> s, Client *client);
-	void kick(std::vector<std::string> s);// KICK <channel> <user> [<comment>]//KICK <channel> <user> [<comment>]
+	void kick(std::vector<std::string> s, Client *client);// KICK <channel> <user> [<comment>]//KICK <channel> <user> [<comment>]
 	void privmsg(std::vector<std::string> s, Client *client);
 	void  personalMessage(std::string msg, std::string senderName, Client * receiver);
 
@@ -46,7 +46,7 @@ public:
 
 	void channelMessage(std::string msg, Client *client, Channel *channel);																   // PRIVMSG <msgtarget> <text to be sent>
 	void leaveMessage(std::string msg, Client *client, Channel *channel);
-	void pass(std::vector<std::string> s); // PASS <password>
+	void pass(std::vector<std::string> s, Client *client); // PASS <password>
 	void part(std::vector<std::string> s, Client *client); // PART <channel> *( "," <channel> ) [ <Part Message> ]
 	void quit(std::vector<std::string> s, Client *client); // QUIT [<Quit message>]
 
