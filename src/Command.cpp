@@ -24,7 +24,6 @@ bool Command::isSpecial(char c)
 };
 bool Command::isDuplication(std::string s, std::map<int, Client *> clientList)
 {
-    // clientList 돌면서 s랑 똑같은 게 있는 지 찾아서 t/f 반환
     std::map<int, Client *>::iterator it = clientList.begin();
     while (it != clientList.end())
     {
@@ -52,90 +51,66 @@ Command::Command(Server *server){
     _server = server;
 }
 
+void Command::pong(std::vector<std::string> s, Client *client){
+    client->appendMsgBuffer("PONG " + s[1] + "\r\n");
+}
+
 void Command::nick(std::vector<std::string> s, Client *client)
 {
     if (isDuplication(s[1], _server->getClientList()))
     {
-        std::cout << "nick dup in nick command\n";
-        // 변경시 중복이면 중복프로토콜메시지(닉변경실패)
+		makeNumericReply(client->getClientFd(), "433", s[1]);
         return;
     }
     if (!nickValidate(s[1]))
     {
-        std::cout << "s1 : " << s[1] << "\n"
-                  << "닉네임규칙안맞음\n";
+        // TODO : 응답 보내주기
+        std::cout << "s1 : " << s[1] << "\n" << "닉네임규칙안맞음\n";
         return;
     }
-
-    client->appendMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
+	// TODO : 클라이언트가 접속한 모든 채널에 닉네임 변경을 알려야함
+    // makeCommandReply
+	client->appendMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
     client->setNickName(s[1]);
-    //중복 체크 ->응답
-    //닉네임 규칙 체크 ->응답
+};
 
-    //맞으면 닉네임 바꾸고 응답 보내기
-}; // NICK <parameter>
 void Command::user(std::vector<std::string> s, Client *client)
 {
     client->setUser(client->getNickName(), s[2], s[3], appendStringColon(4, s));
-	// ㄴ> 닉네임 중복시 nick 파트에서 _를 붙이지만 /USER를 통해 자동으로 들어오는 문자열엔 반영이 되어있지 않음
-    std::cout << "user called" << std::endl;
+};
 
-}; // USER <username> <hostname> <servername> <realname>
 void Command::join(std::vector<std::string> s, Client *client)
 {
-    // JOIN ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] ) / "0"
-    // [JOIN] [#foo,#bar]
     std::vector<std::string> joinChannel = split(s[1], ",");
     std::vector<std::string>::iterator it = joinChannel.begin();
     while (it != joinChannel.end())
     {
-        //클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신//join
-
-        // std::vector<Channel *>::iterator channelBegin = channelList.begin();
-        // std::vector<Channel *>::iterator channelEnd = channelList.end();
-        // std::vector<Channel *>::iterator findIter = findChannel(channelBegin, channelEnd, *it);
-
         std::map<std::string, Channel *>::iterator findChannelIt = _server->getChannelList().find(*it);
 
         if (findChannelIt != _server->getChannelList().end())
         {
-            // 채널 객체가 이미 존재하는 경우
             std::string channelName = (*findChannelIt).second->getChannelName();
             (*findChannelIt).second->addMyClientList(client->getClientFd());
             client->addChannelList(channelName);
-			sendJoinMsg(client->getClientFd(), channelName);
-            std::cout << "채널에 추가됨\n";
+			// sendJoinMsg(client->getClientFd(), channelName);
+			allInChannelMsg(client->getClientFd(), channelName, "JOIN", "");
         }
         else
         {
-            // 새 채널 만들기; 서버.채널리스트에(( 추가))
             _server->addChannelList(*it, client->getClientFd());
-            // 위에서 생성된 채널 클래스 객체에 유저 추가
             _server->findChannel(*it)->addMyClientList(client->getClientFd());
-            // 클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
             client->addChannelList(*it);
-			sendJoinMsg(client->getClientFd(), *it);
+			// sendJoinMsg(client->getClientFd(), *it);
+			allInChannelMsg(client->getClientFd(), *it, "JOIN", "");
         }
-        // TODO : 닉네임 제대로 넣기
         nameListMsg(client->getClientFd(), *it);
         it++;
     // 353 newmember = #채널 :@방장 유저 유저 유저
     }
-    //채널의 클라이언트 리스트 돌면서 다 메세지 보내기
-    // print_channelList(channelList);
-
-    // //connect 127.0.0.1 6667 0000
-    //파싱해서 채널 이름 따오고
-    //서버.채널리스트에 없으면 채널 객체 만들어서 채널 리스트에 추가
-    //클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
 }
 
-//KICK #Finnish John :Speaking English
-//:WiZ KICK #Finnish John
-//:방장 kick #채널 강퇴유저
 void Command::kick(std::vector<std::string> s, Client *client)
 {
-    //client가 방장인 지 확인
     std::vector<std::string> channelNames = split(s[1], ",");
 	std::vector<std::string>::iterator channelNameIt = channelNames.begin();
 	while (channelNameIt != channelNames.end())
@@ -148,8 +123,6 @@ void Command::kick(std::vector<std::string> s, Client *client)
             channelNameIt++;
             continue;
         }
-        // 인자로 받은 채널에 kick 당하는 유저가 존재하는지 확인
-        // s[2] 유저정보 split 해야 할까?
         // TODO : 유저도 list 돌기 ex) aa,bb,cc...
         Client *kickedClient = _server->findClient(s[2]);
         std::vector<int>::iterator it = channel->findClient(kickedClient->getClientFd());
@@ -157,63 +130,50 @@ void Command::kick(std::vector<std::string> s, Client *client)
             channelNameIt++;
             continue;
         }
-        
         std::string msg = ":" + client->getNickName() + " KICK " + *channelNameIt + " " + s[2] + " " + appendStringColon(3, s) + "\r\n";
         client->appendMsgBuffer(msg);
         leaveMessage(msg, client, channel);
         channel->removeClientList(kickedClient->getClientFd());
-        //그 채널에 참여한 모든 유저에게 메시지 보내기
-        //채널에서 해당 유저 삭제
-        
         //TODO : 방장이 방장 추방 -> 방장위임
-        
         channelNameIt++;
     }
-
-
-		// 떠날채널목록을 다 돌면서
-	// 	std::vector<std::string>::iterator searchChannelNameIt = client->findChannel(*channelNameIt);
-	// 	if (searchChannelNameIt != client->getMyChannelList().end()) // 클라이언트가 접속한 채널이 맞으면
-    //     {
-    
-    //     }
-    //     channelNameIt++;
-    // }
 }
-// KICK <channel> <user> [<comment>]//KICK <channel> <user> [<comment>]
 void Command::privmsg(std::vector<std::string> s, Client *client)
 {
-	// privmsg <target> :text
 	std::vector<std::string> target = split(s[1], ",");
 	std::vector<std::string>::iterator targetIt = target.begin();
 	while (targetIt != target.end())
 	{
 		if((*targetIt)[0] == '#')
 		{
-
-			// std::vector<Channel *>::iterator channelIt = findChannel(channelList.begin(), channelList.end(), *targetIt);
-			//TODO :find 실패시 예외처리
-            // TODO : 방장은 닉네임 앞에 @ 붙여서 보내기
+            if (_server->findChannel(*targetIt) == NULL)
+            {
+                std::cout << "153" << std::endl;
+                targetIt++;
+                continue;
+            }
+            //client->appendMsgBuffer(":" + client->getNickName() + " PRIVMSG " + (*targetIt) + " " + appendStringColon(2, s) + "\r\n");
             channelMessage(appendStringColon(2, s), client, _server->findChannel(*targetIt));
-            // std::string msg = ":" + client->getNickName() + " PRIVMSG " + _server->findChannel(*targetIt)->getChannelName() + " " + appendStringColon(2, s) + "\r\n" ;
-			// channelMessage(msg, client, _server->findChannel(*targetIt));
 		}
 		else
 		{
-			// std::vector<Client *>::iterator clientIt = findClient(clientList.begin(), clientList.end(), *targetIt);
-			//TODO :find 실패시 예외처리
+            if (_server->findChannel(*targetIt) == NULL)
+            {
+                std::cout << "163" << std::endl;
+                targetIt++;
+                continue;
+            }
+            client->appendMsgBuffer(":" + client->getNickName() + " PRIVMSG " + (*targetIt) + " " + appendStringColon(2, s) + "\r\n");
 			personalMessage(appendStringColon(2, s), client->getNickName(), _server->findClient(*targetIt));
 		}
 		targetIt++;
 	}
-	std::cout << "i am privmsg\n";
 }
 
 
 void  Command::personalMessage(std::string msg, std::string senderName, Client * receiver)
 {
 	receiver->appendMsgBuffer(":" + senderName + " PRIVMSG " + receiver->getNickName() + " " + msg + "\r\n");
-	//std::cout << "fd : " << receiver->getClientFd() << std::endl;
 }
 
 void  Command::channelPersonalMessage(std::string msg, std::string senderName, Client *client, std::string channelName)
@@ -224,8 +184,6 @@ void  Command::channelPersonalMessage(std::string msg, std::string senderName, C
 
 void Command::channelMessage(std::string msg, Client *client, Channel *channel)
 {
-    //if (client->getClientFd() == channel->getMyOperator())
-    //    client->getNickName().insert(0, "@");
 	std::vector<int> clients = channel->getMyClientFdList();
 	std::vector<int>::iterator clientsIt = clients.begin();
 	while(clientsIt != clients.end())
@@ -235,7 +193,6 @@ void Command::channelMessage(std::string msg, Client *client, Channel *channel)
         clientsIt++;
 	}
 }
-//:syrk!kalt@millennium.stealth.net QUIT :Gone to have lunch
 void Command::leaveMessage(std::string msg, Client *client, Channel *channel)
 {
 	std::vector<int> clients = channel->getMyClientFdList();
@@ -257,12 +214,9 @@ void Command::pass(std::vector<std::string> s, Client *client)
 {
     if (s[1] != _server->getPass())
     {
-        std::cout << "비번안맞음" << std::endl;
         client->appendMsgBuffer("464 " + client->getNickName() + " :Password incorrect\r\n");
-
         return;
     }
-    std::cout << "called" << s[0] << std::endl;
 } // PASS <password>
 
 void Command::part(std::vector<std::string> s, Client *client)
@@ -274,36 +228,23 @@ void Command::part(std::vector<std::string> s, Client *client)
 	std::vector<std::string>::iterator partChannelIt = partChannel.begin();
 	while (partChannelIt != partChannel.end())
     {
-	
-		// 떠날채널목록을 다 돌면서
 		std::vector<std::string>::iterator searchChannelNameIt = client->findChannel(*partChannelIt);
-		if (searchChannelNameIt != client->getMyChannelList().end()) // 클라이언트가 접속한 채널이 맞으면
+		if (searchChannelNameIt != client->getMyChannelList().end())
         {
-            
-            std::cout << "part channel name: " << *searchChannelNameIt << std::endl;
 			Channel *tmp = _server->findChannel(*partChannelIt);
-            std::cout << "my operator " << tmp->getMyOperator() << std::endl;
             tmp->removeClientList(client->getClientFd());
-            //채널에서도 클라이언트 지우기
-			// :떠난사람!떠난사람@도메인 part 채널이름 :메세지
 			client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " PART " + *searchChannelNameIt + "\r\n");
             std::string msg = ":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " PART " + *searchChannelNameIt + "\r\n";
             leaveMessage(msg, client, tmp);
 			client->removeChannelList(searchChannelNameIt);
-            
-            //TODO : 채널 떠났다고 채널에 있는 사람들에게 알려주기 left
-            //TODO : 만약 채널에 더이상 사람이 없으면 if (channel.size() == 0) 서버에서 채널 삭제하기..
-            
-            // TODO : channel 에 아무도 없으면 채널도 삭제 
             if (tmp->getMyClientFdList().empty() == true)
             {
                 _server->getChannelList().erase(tmp->getChannelName());
+                delete tmp;
             }
             else
             {
                 tmp->setMyOperator(*(tmp->getMyClientFdList().begin()));
-             std::cout << "my operator change to " << tmp->getMyOperator() << std::endl;
-
             }
         }
         else //없으면 에러메세지
@@ -313,33 +254,38 @@ void Command::part(std::vector<std::string> s, Client *client)
         }
         partChannelIt++;
     }
-} // PART <channel> *( "," <channel> ) [ <Part Message> ]
+}
 
 void Command::quit(std::vector<std::string> s, Client *client)
 {
-	//소켓지우고
-	// 나가려는 client 가 참여한 채널 리스트 이터레이터
 	std::vector<std::string>::iterator channelListInClientClassIt = client->getMyChannelList().begin();
  	while (channelListInClientClassIt != client->getMyChannelList().end())
     {
         Channel *tmp = _server->findChannel(*channelListInClientClassIt);
         // channel class -> myclientList 에서 삭제
         tmp->removeClientList(client->getClientFd());
-        std::string msg = ":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " PART " + tmp->getChannelName() + " " + appendStringColon(1, s) + "\r\n";
-        // 채널 내 자신을 제외한 사람들에게 메세지 전송
+
+// void Command::allInChannelMsg(int target, std::string channelName, std::string command)
+		allInChannelMsg(client->getClientFd(), tmp->getChannelName(), "PART", appendStringColon(1,s));
+        // std::string msg = ":" + makeFullname(client->getClientFd()) + " PART " + tmp->getChannelName() + " " + appendStringColon(1, s) + "\r\n";
+		// void Command::makeNumericReply(int fd, std::string flag, std::string str)
+		
+		// 채널 내 자신을 제외한 사람들에게 메세지 전송
 		//std::cout << "leave msg check " << msg <<std::endl;
-        leaveMessage(msg, client, tmp);
-        std::cout << "254 channel name "<< tmp->getChannelName() << std::endl;
-        // TODO : channel 에 아무도 없으면 채널도 삭제 
+        // leaveMessage(msg, client, tmp);
+		
+
         if (tmp->getMyClientFdList().empty() == true)
         {
             _server->getChannelList().erase(tmp->getChannelName());
+            delete tmp;
         }
         channelListInClientClassIt++;
     }
     //_server.clientList 에서 지우기
     _server->getClientList().erase(client->getClientFd());
     close(client->getClientFd());
+    delete client;
     //TODO : 현재 클라이언트 소켓 삭제
 } // QUIT [<Quit message>]
  
@@ -363,8 +309,8 @@ void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int
                 std::cout << "비번안맞음" << std::endl;
             	client->appendMsgBuffer(ERR_PASSWDMISMATCH);
             	client->appendMsgBuffer(" " + client->getNickName() + " :Password incorrect\r\n");
-                //객체 삭제...
-                //소켓 삭제...
+                
+                // TODO : 위에 password 틀렸다는 메세지는 전송 안해도 괜찮을까?
                 _server->getClientList().erase(client->getClientFd());
                 close(client->getClientFd());
 				return ;
@@ -409,7 +355,10 @@ std::string Command::makeFullname(int fd)
 {
 	// 요청한 fd의 풀네임을 만들어 주는 함수 (임시로 fullname이라 칭함)
 	Client *tmp = _server->findClient(fd);
-	return (":" + tmp->getNickName() + "!" + tmp->getUserName() + "@" + tmp->getHostName());
+	std::string test = (":" + tmp->getNickName() + "!" + tmp->getUserName() + "@" + tmp->getServerName());
+	return (test);
+	// return (":" + tmp->getNickName() + "!" + tmp->getUserName() + "@" + tmp->getServerName());//serverName?
+
 };
 
 void Command::welcomeMsg(int fd, std::string flag, std::string msg, std::string name)
@@ -423,6 +372,18 @@ void Command::welcomeMsg(int fd, std::string flag, std::string msg, std::string 
 	tmp->appendMsgBuffer(" ");
 	tmp->appendMsgBuffer(name);
 	tmp->appendMsgBuffer("\r\n");
+}
+
+void Command::allInChannelMsg(int target, std::string channelName, std::string command, std::string msg)
+{
+	Channel *channelPtr = _server->findChannel(channelName);
+	std::vector<int> myClientList = channelPtr->getMyClientFdList();
+	std::vector<int>::iterator It = myClientList.begin();
+	for(; It < myClientList.end(); It++)
+	{
+		Client *tmp = _server->findClient(*It);
+		tmp->appendMsgBuffer(makeFullname(target) + " " + command + " " + channelName + " " + msg + "\r\n");
+	}
 }
 
 void Command::sendJoinMsg(int joinfd, std::string channelName)
@@ -468,14 +429,29 @@ void Command::nameListMsg(int fd, std::string channelName)
 	tmp->appendMsgBuffer(" " + tmp->getNickName() +  " " + channelName + " :End of NAMES list" + "\r\n");
 }
 
-// void Command::makeReply(int fd, std::string flag, std::string msg, std::string name)
-// {
-// 	요청한 fd의 클라이언트에 메세지를 조합해서 저장하는 함수, 모듈화 시도했으나 잘 안됨
-// 	Client *tmp = _server->findClient(fd);
-// 	tmp->appendMsgBuffer(flag);
-// 	tmp->appendMsgBuffer(" ");
-// 	tmp->appendMsgBuffer(name);
-// 	tmp->appendMsgBuffer(" ");
-// 	tmp->appendMsgBuffer(msg);
-// 	tmp->appendMsgBuffer("\r\n");
-// }
+
+
+void Command::makeNumericReply(int fd, std::string flag, std::string str)
+{
+	Client *tmp = _server->findClient(fd);
+	// TODO:: 서버도메인 추가해야함
+	tmp->appendMsgBuffer(flag);
+	tmp->appendMsgBuffer(" ");
+	tmp->appendMsgBuffer(tmp->getNickName());
+	tmp->appendMsgBuffer(" :");
+	tmp->appendMsgBuffer(str);
+	// str을 만들어서 보내주면 됨
+	tmp->appendMsgBuffer("\r\n");
+}
+
+void Command::makeCommandReply(int fd, std::string command, std::string str)
+{
+	Client *tmp = _server->findClient(fd);
+	tmp->appendMsgBuffer(":");
+	tmp->appendMsgBuffer(tmp->getNickName());
+	tmp->appendMsgBuffer(" ");
+	tmp->appendMsgBuffer(command);
+	tmp->appendMsgBuffer(" ");
+	tmp->appendMsgBuffer(str);
+	tmp->appendMsgBuffer("\r\n");
+}
