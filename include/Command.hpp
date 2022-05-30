@@ -14,6 +14,8 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+#include "Define.hpp"
+
 
 class Server;
 
@@ -29,7 +31,7 @@ private:
 	bool isDuplication(std::string s, std::map<int, Client *> clientList);
 	bool nickValidate(std::string s);
 	Server *_server;
-	std::string makePrefix(std::string nick, std::string user, std::string server);
+	std::string makeFullname(int fd);
 public:
 	// Command();
 	//Command(Server &server);
@@ -66,6 +68,12 @@ public:
 	// 	std::cout << "called" << s[0] << std::endl;
 	// };
 	void welcome(std::vector<std::string> cmd, Client *client, std::map<int, Client *> clientList);
+
+
+	// void makeReply(int fd, std::string flag, std::string msg, std::string name);
+	void welcomeMsg(int fd, std::string flag, std::string msg, std::string name);
+	void sendJoinMsg(int joinfd, std::string channelName);
+	void nameListMsg(int fd, std::string channelName);
 };
 
 #endif

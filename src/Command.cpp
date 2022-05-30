@@ -76,7 +76,8 @@ void Command::nick(std::vector<std::string> s, Client *client)
 }; // NICK <parameter>
 void Command::user(std::vector<std::string> s, Client *client)
 {
-    client->setUser(s[1], s[2], s[3], appendStringColon(4, s));
+    client->setUser(client->getNickName(), s[2], s[3], appendStringColon(4, s));
+	// ㄴ> 닉네임 중복시 nick 파트에서 _를 붙이지만 /USER를 통해 자동으로 들어오는 문자열엔 반영이 되어있지 않음
     std::cout << "user called" << std::endl;
 
 }; // USER <username> <hostname> <servername> <realname>
@@ -102,11 +103,8 @@ void Command::join(std::vector<std::string> s, Client *client)
             std::string channelName = (*findChannelIt).second->getChannelName();
             (*findChannelIt).second->addMyClientList(client->getClientFd());
             client->addChannelList(channelName);
+			sendJoinMsg(client->getClientFd(), channelName);
             std::cout << "채널에 추가됨\n";
-            // TODO: 채널접속시 채널에 접속해 있는 사람들에게 알림메세지
-            client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + channelName + "\r\n");
-            //
-            //:이름 JOIN 채널명
         }
         else
         {
@@ -116,13 +114,10 @@ void Command::join(std::vector<std::string> s, Client *client)
             _server->findChannel(*it)->addMyClientList(client->getClientFd());
             // 클라이언트.채널리스트 갱신, 채널.클라이언트리스트 갱신
             client->addChannelList(*it);
-            client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " JOIN " + *it + "\r\n");
+			sendJoinMsg(client->getClientFd(), *it);
         }
-        //
-        // client->appendMsgBuffer("332 " + client->getNickName() + " " + *it + " :topic hard code" + "\r\n");
         // TODO : 닉네임 제대로 넣기
-        client->appendMsgBuffer("353 " + client->getNickName() + " = " + *it + " :@ahn jeonyhun swang dummy " + "\r\n");
-        client->appendMsgBuffer("366 " + client->getNickName() +  " " + *it + " :End of NAMES list" + "\r\n");
+        nameListMsg(client->getClientFd(), *it);
         it++;
     // 353 newmember = #채널 :@방장 유저 유저 유저
     }
@@ -361,17 +356,18 @@ void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int
 	while (cmd_it != cmd.end())
 	{
 		std::vector<std::string> result = split(*cmd_it, " ");
-		if (result[0] == "PASS")
+		if (result[0] == "PASS") //패스워드를 아예 안넣을 경우 pass 명령어를 타지 않음
 		{
             if (result[1] != _server->getPass())
             {
                 std::cout << "비번안맞음" << std::endl;
-            	client->appendMsgBuffer("464 " + client->getNickName() + " :Password incorrect\r\n");
+            	client->appendMsgBuffer(ERR_PASSWDMISMATCH);
+            	client->appendMsgBuffer(" " + client->getNickName() + " :Password incorrect\r\n");
                 //객체 삭제...
                 //소켓 삭제...
                 _server->getClientList().erase(client->getClientFd());
                 close(client->getClientFd());
-                return ;
+				return ;
             }
 		}
 		else if (result[0] == "NICK")
@@ -379,17 +375,18 @@ void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int
 			if (!nickValidate(result[1]))
 			{
 				std::cout << "닉네임규칙안맞음\n";
-				return;
+				// client->appendMsgBuffer(": 432 test :nick rule\r\n");
 			}
 			if (isDuplication(result[1], clientList))
 			{
 				std::cout << "nick dup\n";
 				result[1].append("_");
-				// 중복이면 마지막에 '_' 추가하기()->웰컴단계에서
+				// client->appendMsgBuffer(": 433 test :nick dup\r\n");
 
                 // 433     ERR_NICKNAMEINUSE
                 // "<nick> :Nickname is already in use"
             }
+			std::cout << "nick name check: " << result[1] << std::endl;
 			client->setNickName(result[1]);
 		}
 		else if (result[0] == "USER")
@@ -401,15 +398,84 @@ void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int
 	// print_clientList(clientList);
 	if (client->getNickName().empty() == false && client->getUserName().empty() == false/* && PASS 여부*/)
     {
-        client->appendMsgBuffer("001 " + client->getNickName() + " :Welcome to the Internet Relay Network " + client->getNickName() + "\r\n");
-	    std::cout << "welcome\n";
+    	welcomeMsg(client->getClientFd(), RPL_WELCOME, ":Welcome to the Internet Relay Network", client->getNickName());
     }
 }
 
 
 
 
-std::string Command::makePrefix(std::string nick, std::string user, std::string server)
+std::string Command::makeFullname(int fd)
 {
-	return (":" + nick + "!" + user + "@" + server);
+	// 요청한 fd의 풀네임을 만들어 주는 함수 (임시로 fullname이라 칭함)
+	Client *tmp = _server->findClient(fd);
+	return (":" + tmp->getNickName() + "!" + tmp->getUserName() + "@" + tmp->getHostName());
 };
+
+void Command::welcomeMsg(int fd, std::string flag, std::string msg, std::string name)
+{
+	Client *tmp = _server->findClient(fd);
+	tmp->appendMsgBuffer(flag);
+	tmp->appendMsgBuffer(" ");
+	tmp->appendMsgBuffer(name);
+	tmp->appendMsgBuffer(" ");
+	tmp->appendMsgBuffer(msg);
+	tmp->appendMsgBuffer(" ");
+	tmp->appendMsgBuffer(name);
+	tmp->appendMsgBuffer("\r\n");
+}
+
+void Command::sendJoinMsg(int joinfd, std::string channelName)
+{
+	Channel *channelPtr = _server->findChannel(channelName);
+	std::vector<int> myClientList = channelPtr->getMyClientFdList();
+	std::vector<int>::iterator It = myClientList.begin();
+	for(; It < myClientList.end(); It++)
+	{
+		Client *tmp = _server->findClient(*It);
+		tmp->appendMsgBuffer(makeFullname(joinfd) + " JOIN " + channelName + "\r\n");
+	}
+}
+
+void Command::nameListMsg(int fd, std::string channelName)
+{
+	Client *tmp = _server->findClient(fd);	
+	tmp->appendMsgBuffer(RPL_NAMREPLY);
+	tmp->appendMsgBuffer(" ");
+	tmp->appendMsgBuffer(tmp->getNickName());
+	tmp->appendMsgBuffer(" = " + channelName);
+	Channel *channelPtr = _server->findChannel(channelName);
+	std::vector<int> clientList = channelPtr->getMyClientFdList();
+	std::vector<int>::iterator clientListIt = clientList.begin();
+	std::string name;
+	tmp->appendMsgBuffer(" :");
+	for (; clientListIt < clientList.end() - 1; clientListIt++)
+	{
+		if (channelPtr->getMyOperator() == *clientListIt)
+			tmp->appendMsgBuffer("@");
+		name = (_server->findClient(*clientListIt))->getNickName();
+		tmp->appendMsgBuffer(name);
+		tmp->appendMsgBuffer(" ");
+	}
+	if (channelPtr->getMyOperator() == *clientListIt)
+		tmp->appendMsgBuffer("@");
+	name = (_server->findClient(*clientListIt))->getNickName();
+	tmp->appendMsgBuffer(name);
+	tmp->appendMsgBuffer("\r\n");
+	
+	// End of NAMES list
+	tmp->appendMsgBuffer(RPL_ENDOFNAMES);
+	tmp->appendMsgBuffer(" " + tmp->getNickName() +  " " + channelName + " :End of NAMES list" + "\r\n");
+}
+
+// void Command::makeReply(int fd, std::string flag, std::string msg, std::string name)
+// {
+// 	요청한 fd의 클라이언트에 메세지를 조합해서 저장하는 함수, 모듈화 시도했으나 잘 안됨
+// 	Client *tmp = _server->findClient(fd);
+// 	tmp->appendMsgBuffer(flag);
+// 	tmp->appendMsgBuffer(" ");
+// 	tmp->appendMsgBuffer(name);
+// 	tmp->appendMsgBuffer(" ");
+// 	tmp->appendMsgBuffer(msg);
+// 	tmp->appendMsgBuffer("\r\n");
+// }
