@@ -39,9 +39,11 @@ std::vector<std::string> split(std::string &line, std::string s)
 void print_stringVector(std::vector<std::string> v)
 {
 	std::vector<std::string>::iterator it = v.begin();
+	std::cout << "----------in print_stringVector\n";
 	while (it != v.end())
 	{
 		std::cout << "[" << (*it) << "]" << std::endl;
 		it++;
 	}
+	std::cout << "ㄴ------------------\n\n";
 }

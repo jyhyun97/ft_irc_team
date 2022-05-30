@@ -15,8 +15,8 @@ int Server::pollingEvent(int &index){
 
 	//TODO : accept 예외처리
 	_clientList.insert(std::pair<int, Client *>(_clientFd, new Client(_clientFd)));
-	std::cout << "client fd: " << _clientList.find(_clientFd)->first << std::endl;
-	std::cout << "connect client\n";
+	std::cout << "\n\n*Accept Client fd: " << _clientList.find(_clientFd)->first << "*" <<std::endl;
+	// std::cout << "connect client\n";
 	//비번 확인
 	for (index = 1; index < OPEN_MAX; index++)
 	{
@@ -165,10 +165,10 @@ void Server::relayEvent()
 			else
 			{
 				_msgBuffer = std::string(buf);
-				std::cout << "--- recvMsgBuf --- \n"
-							<< _msgBuffer << std::endl;
+				std::cout << "---- recvMsgBuf --- \n";
+				std::cout << _msgBuffer << std::endl;
 				std::cout << "pollfd : " << _pollClient[i].fd << std::endl;
-				std::cout << "--- endRecvMsgBuf --- " << std::endl;
+				std::cout << "ㄴ--- endRecvMsgBuf ---\n\n\n" << std::endl;
 
 				Client * tmp = (_clientList.find(_pollClient[i].fd))->second;
 				std::vector<std::string> cmd = split(_msgBuffer, "\r\n");
