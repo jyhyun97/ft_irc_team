@@ -1,7 +1,7 @@
 #include "../include/Util.hpp"
 
-
-
+# define C_NRML "\033[0m"
+# define C_GREN "\033[32m" 
 
 
 std::string appendStringColon(size_t startIndex, std::vector<std::string> msg)
@@ -39,9 +39,11 @@ std::vector<std::string> split(std::string &line, std::string s)
 void print_stringVector(std::vector<std::string> v)
 {
 	std::vector<std::string>::iterator it = v.begin();
+	std::cout << C_GREN << "----------in print_stringVector\n";
 	while (it != v.end())
 	{
 		std::cout << "[" << (*it) << "]" << std::endl;
 		it++;
 	}
+	std::cout << "ㄴ------------------\n\n" << C_NRML;
 }

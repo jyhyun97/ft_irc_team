@@ -15,6 +15,14 @@
 #include <map>
 #include "Util.hpp"
 
+# define C_NRML "\033[0m"
+# define C_RED  "\033[31m"
+# define C_GREN "\033[32m" 
+# define C_YLLW "\033[33m" 
+# define C_BLUE "\033[34m" 
+
+
+
 class Channel;
 class Client;
 class Command;
