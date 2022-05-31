@@ -55,22 +55,69 @@ void Command::pong(std::vector<std::string> s, Client *client){
     client->appendMsgBuffer("PONG " + s[1] + "\r\n");
 }
 
+//ERR_NONICKNAMEGIVEN  431   ???
+//ERR_ERRONEUSNICKNAME  432
+//ERR_NICKNAMEINUSE    433
+//ERR_NICKCOLLISION     434  다른 서버와 닉네임 충돌이므로 지금은 필요 없음
 void Command::nick(std::vector<std::string> s, Client *client)
 {
     if (isDuplication(s[1], _server->getClientList()))
     {
-		makeNumericReply(client->getClientFd(), "433", s[1]);
+		// ERR_NICKNAMEINUSE
+		makeNumericReply(client->getClientFd(), "433", s[1] +" :Nickname is already in use");
         return;
     }
     if (!nickValidate(s[1]))
     {
-        // TODO : 응답 보내주기
-        std::cout << "s1 : " << s[1] << "\n" << "닉네임규칙안맞음\n";
+		//ERR_ERRONEUSNICKNAME
+		makeNumericReply(client->getClientFd(), "432", s[1] + " :Erroneus nickname");
         return;
     }
-	// TODO : 클라이언트가 접속한 모든 채널에 닉네임 변경을 알려야함
-    // makeCommandReply
-	client->appendMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
+
+	// TODO : _server.clientList 전체에 보내도 된다?
+
+
+	std::vector<std::string> participatingChannelName = client->getMyChannelList();
+	// 닉네임 변경한 클라이언트에게 바뀌었다는 정보 전송
+	if (participatingChannelName.size() == 0)
+	{
+		makeCommandReply(client->getClientFd(), "NICK", s[1]);
+	}
+	else
+	{
+		// 참여 중인 모든 채널에 닉네임 변경했다는 정보 전송
+		std::vector<std::string>::iterator participatingChannelNameIt = participatingChannelName.begin();
+		std::set<int> fdList;
+		while (participatingChannelNameIt != participatingChannelName.end())
+		{
+			Channel *channel = _server->findChannel(*participatingChannelNameIt);
+			if (channel == NULL)
+				continue;
+			// fd 중복을 피하기 위해 set 사용
+			// 해당 채널에 참여 중인 클라이언트들에게 닉네임 변경 정보 전송
+			std::vector<int> fdsInChannel = channel->getMyClientFdList();
+			std::vector<int>::iterator fdsInChannelIt = fdsInChannel.begin();
+			while(fdsInChannelIt != fdsInChannel.end())
+			{
+				if (client->getClientFd() != (*fdsInChannelIt))
+				{
+					fdList.insert(*fdsInChannelIt);
+					//makeCommandReply(*fdsInChannelIt, "NICK", s[1]);
+				}
+				fdsInChannelIt++;
+			}
+			//fdList.~set();
+			participatingChannelNameIt++;
+		}
+		std::set<int>::iterator fdsIt = fdList.begin();
+		while (fdsIt != fdList.end())
+		{
+			makeCommandReply(*fdsIt, "NICK", s[1]);
+			fdsIt++;
+		}
+		fdList.clear();
+	}
+	//client->appendMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
     client->setNickName(s[1]);
 };
 
@@ -124,6 +171,7 @@ void Command::kick(std::vector<std::string> s, Client *client)
             continue;
         }
         // TODO : 유저도 list 돌기 ex) aa,bb,cc...
+		//std::vector<std::string> user = split(s[2], ",");
         Client *kickedClient = _server->findClient(s[2]);
         std::vector<int>::iterator it = channel->findClient(kickedClient->getClientFd());
         if (it == channel->getMyClientFdList().end()){
@@ -150,8 +198,8 @@ void Command::privmsg(std::vector<std::string> s, Client *client)
             {
 				//403 ERR_NOSUCHCHANNEL
 				// IRCnet 에서는 401 로 통일된 듯
-				//makeNumericReply(client->getClientFd(), "403", *targetNameIt + " :No such channel");
-				client->appendMsgBuffer("401 " + client->getNickName() + " " + *targetNameIt + " :No such nick/channel\r\n");
+				makeNumericReply(client->getClientFd(), "403", *targetNameIt + " :No such channel");
+				//client->appendMsgBuffer("401 " + client->getNickName() + " " + *targetNameIt + " :No such nick/channel\r\n");
                 targetNameIt++;
                 continue;
             }
@@ -163,7 +211,8 @@ void Command::privmsg(std::vector<std::string> s, Client *client)
             if (_server->findClient(*targetNameIt) == NULL)
             {
 				// TODO : 401 ERR_NOSUCHNICK
-				client->appendMsgBuffer("401 " + client->getNickName() + " " + *targetNameIt + " :No such nick/channel\r\n");
+				makeNumericReply(client->getClientFd(), "401", *targetNameIt + " :No such nick/channel");
+				//client->appendMsgBuffer("401 " + client->getNickName() + " " + *targetNameIt + " :No such nick/channel\r\n");
                 targetNameIt++;
                 continue;
             }
@@ -176,22 +225,6 @@ void Command::privmsg(std::vector<std::string> s, Client *client)
 		targetNameIt++;
 	}
 }
-
-
-//void  Command::personalMessage(std::string msg, std::string senderName, Client * receiver)
-//{
-//	if (receiver == NULL)
-//		return ;
-//	receiver->appendMsgBuffer(":" + senderName + " PRIVMSG " + receiver->getNickName() + " " + msg + "\r\n");
-//}
-
-//void  Command::channelPersonalMessage(std::string msg, std::string senderName, Client *client, std::string channelName)
-//{
-//	if (client == NULL)
-//		return ;
-//	client->appendMsgBuffer(":" + senderName + " PRIVMSG " + channelName + " " + msg + "\r\n");
-//	std::cout << "fd : " << client->getClientFd() << std::endl;
-//}
 
 void  Command::makePrivMessage(Client *client, std::string senderName, std::string receiver, std::string msg)
 {
@@ -458,7 +491,7 @@ void Command::makeNumericReply(int fd, std::string flag, std::string str)
 	tmp->appendMsgBuffer(flag);
 	tmp->appendMsgBuffer(" ");
 	tmp->appendMsgBuffer(tmp->getNickName());
-	tmp->appendMsgBuffer(" :");
+	tmp->appendMsgBuffer(" ");
 	tmp->appendMsgBuffer(str);
 	// str을 만들어서 보내주면 됨
 	tmp->appendMsgBuffer("\r\n");

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include "Channel.hpp"
 #include "Client.hpp"
 #include "Util.hpp"
@@ -28,6 +29,10 @@ private:
 	bool nickValidate(std::string s);
 	Server *_server;
 	std::string makeFullname(int fd);
+
+	void makePrivMessage(Client *client, std::string senderName, std::string receiver, std::string msg);
+	void channelMessage(std::string msg, Client *client, Channel *channel);   // PRIVMSG <msgtarget> <text to be sent>
+	void leaveMessage(std::string msg, Client *client, Channel *channel);
 public:
 	// Command();
 	//Command(Server &server);
@@ -51,11 +56,6 @@ public:
 	// void notice
 	void pong(std::vector<std::string> s, Client *client);
 
-	void makePrivMessage(Client *client, std::string senderName, std::string receiver, std::string msg);
-	//void personalMessage(std::string msg, std::string senderName, Client * receiver);
-	//void channelPersonalMessage(std::string msg, std::string senderName, Client *client, std::string channelName);
-	void channelMessage(std::string msg, Client *client, Channel *channel);   // PRIVMSG <msgtarget> <text to be sent>
-	void leaveMessage(std::string msg, Client *client, Channel *channel);
 	//todo : private
 
 
