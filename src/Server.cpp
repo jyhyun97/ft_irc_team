@@ -62,7 +62,7 @@ template <class T1, class T2>
 void deleteMap(std::map<T1, T2> &map){
 	typename std::map<T1, T2>::iterator it1 = map.begin();
 	typename std::map<T1, T2>::iterator it2 = it1;
-	
+
 	while (it1 != map.end())
 	{
 		it1++;
@@ -99,7 +99,10 @@ std::map<std::string, Channel *> &Server::getChannelList() {
 }
 
 Client* Server::findClient(int fd) {
-	return _clientList.find(fd)->second;
+	std::map<int, Client *>::iterator it;
+	if ((it = _clientList.find(fd)) != _clientList.end())
+		return it->second;
+	return NULL;
 }
 
 Client* Server::findClient(std::string nick) {
