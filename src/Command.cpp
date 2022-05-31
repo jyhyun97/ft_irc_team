@@ -74,10 +74,6 @@ void Command::nick(std::vector<std::string> s, Client *client)
     client->setNickName(s[1]);
 };
 
-void Command::user(std::vector<std::string> s, Client *client)
-{
-    client->setUser(client->getNickName(), s[2], s[3], appendStringColon(4, s));
-};
 
 void Command::join(std::vector<std::string> s, Client *client)
 {
@@ -210,14 +206,6 @@ void Command::leaveMessage(std::string msg, Client *client, Channel *channel)
 }
 
 
-void Command::pass(std::vector<std::string> s, Client *client)
-{
-    if (s[1] != _server->getPass())
-    {
-        client->appendMsgBuffer("464 " + client->getNickName() + " :Password incorrect\r\n");
-        return;
-    }
-} // PASS <password>
 
 void Command::part(std::vector<std::string> s, Client *client)
 {
@@ -293,60 +281,7 @@ void Command::quit(std::vector<std::string> s, Client *client)
 //: 닉넴 ! 유저네임 @ 서버네임 QUIT : 메세지
 //
 
-void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int, Client *> clientList)
-{
-	//닉 체크하고 최초 닉네임 설정..
-	//TODO : clientList 길이 체크하고 3개 명령어 다 처리한 후 welcome 전송
-	//유저 설정
-	std::vector<std::string>::iterator cmd_it = cmd.begin();
-	while (cmd_it != cmd.end())
-	{
-		std::vector<std::string> result = split(*cmd_it, " ");
-		if (result[0] == "PASS") //패스워드를 아예 안넣을 경우 pass 명령어를 타지 않음
-		{
-            if (result[1] != _server->getPass())
-            {
-                std::cout << "비번안맞음" << std::endl;
-            	client->appendMsgBuffer(ERR_PASSWDMISMATCH);
-            	client->appendMsgBuffer(" " + client->getNickName() + " :Password incorrect\r\n");
-                
-                // TODO : 위에 password 틀렸다는 메세지는 전송 안해도 괜찮을까?
-                _server->getClientList().erase(client->getClientFd());
-                close(client->getClientFd());
-				return ;
-            }
-		}
-		else if (result[0] == "NICK")
-		{
-			if (!nickValidate(result[1]))
-			{
-				std::cout << "닉네임규칙안맞음\n";
-				// client->appendMsgBuffer(": 432 test :nick rule\r\n");
-			}
-			if (isDuplication(result[1], clientList))
-			{
-				std::cout << "nick dup\n";
-				result[1].append("_");
-				// client->appendMsgBuffer(": 433 test :nick dup\r\n");
 
-                // 433     ERR_NICKNAMEINUSE
-                // "<nick> :Nickname is already in use"
-            }
-			std::cout << "nick name check: " << result[1] << std::endl;
-			client->setNickName(result[1]);
-		}
-		else if (result[0] == "USER")
-		{
-			user(result, client);
-		}
-		cmd_it++;
-	}
-	// print_clientList(clientList);
-	if (client->getNickName().empty() == false && client->getUserName().empty() == false/* && PASS 여부*/)
-    {
-    	welcomeMsg(client->getClientFd(), RPL_WELCOME, ":Welcome to the Internet Relay Network", client->getNickName());
-    }
-}
 
 
 
@@ -438,7 +373,7 @@ void Command::makeNumericReply(int fd, std::string flag, std::string str)
 	tmp->appendMsgBuffer(flag);
 	tmp->appendMsgBuffer(" ");
 	tmp->appendMsgBuffer(tmp->getNickName());
-	tmp->appendMsgBuffer(" :");
+	tmp->appendMsgBuffer(" ");
 	tmp->appendMsgBuffer(str);
 	// str을 만들어서 보내주면 됨
 	tmp->appendMsgBuffer("\r\n");
@@ -454,4 +389,91 @@ void Command::makeCommandReply(int fd, std::string command, std::string str)
 	tmp->appendMsgBuffer(" ");
 	tmp->appendMsgBuffer(str);
 	tmp->appendMsgBuffer("\r\n");
+}
+
+
+void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int, Client *> clientList)
+{
+	std::vector<std::string>::iterator cmd_it = cmd.begin();
+	// cmd_it == 여러줄의 명령어 중 한줄씩
+	while (cmd_it != cmd.end())
+	{
+		std::vector<std::string> result = split(*cmd_it, " ");
+		if (result[0] == "PASS") //패스워드를 아예 안넣을 경우 pass 명령어를 타지 않음
+		{
+			// std::cout << C_RED << (int)(result.size()) << C_NRML << std::endl;
+			if (client->getRegist() & PASS)
+			{
+				makeNumericReply(client->getClientFd(), "000", ":You are already checked Password");
+				return ;
+			}
+			if (result.size() == 1)
+			{
+				//패스워드 입력 안함
+				makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, ":Not enough parameters...\nYou are not Input Password");
+				std::cout << C_RED << "needmoreparams\n" << C_NRML;
+				return ;
+			}
+			if (result[1] == _server->getPass())
+			{
+				client->setRegist(PASS);
+			}
+			else
+            {
+				makeNumericReply(client->getClientFd(), ERR_PASSWDMISMATCH, ":Server Password Incorrect");
+				_server->removeUnconnectClient(client->getClientFd());
+				return ;
+				//비번이 틀리면 연결 끊어버리기..
+				// irssi 에서 한번 틀리면 또 connect를 해야하는데... 그러면 새로운 소켓으로 연결됨
+				// 그냥 새로 연결하도록 연결 끊어버리기
+            } 
+		}
+		else if (client->getRegist() & PASS && result[0] == "NICK")
+		{
+			if (!nickValidate(result[1]))
+			{
+				makeNumericReply(client->getClientFd(), ERR_ERRONEUSNICKNAME, result[1] + " :Erroneus Nickname");
+				return ;
+			}
+			if (isDuplication(result[1], clientList))
+			{
+				std::string dup = result[1];
+				result[1].append("_");
+				makeNumericReply(client->getClientFd(), "000", ":" + dup + " is already owned...\nYou are now known as " + result[1]);
+				//좀 더 친절하게 출력하고 싶음
+			}
+			client->setNickName(result[1]);
+			client->setRegist(NICK);
+		}
+		else if (client->getRegist() & PASS && client->getRegist() & NICK && result[0] == "USER")
+		{
+			if (result.size() != 5)
+			{
+				makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "USER :Not enough parameters...\n/USER <username> <hostname> <servername> <:realname>");
+				return ;
+			}
+			std::cout << C_RED << "in user usercommad size : "<< (int)(result.size()) << C_NRML << std::endl;
+			print_stringVector(result);
+			// USER는 username hostname servername realname
+			client->setUser(result[1], result[2], result[3], appendStringColon(4, result));
+			client->setRegist(USER);
+		}
+		else if (result[0] != "CAP")
+		{
+			// 정상등록과정에서 벗어난 애들은 모두 여기로
+			makeNumericReply(client->getClientFd(), ERR_ALREADYREGISTRED, ":You are not registed server, Try again");
+			_server->removeUnconnectClient(client->getClientFd());
+			//지워버리는 이유 -> irssi에서 PASS를 비워두고 /connecet 하면 PASS가 없기때문에 연결을 제한.
+			// irssi에서 /connect시 새 소켓을 연결하므로 아예 지워버리는 방법으로....
+			return ;
+		}
+		cmd_it++;
+	}
+	// while문에서 정상적인 등록 과정을 거쳤을 때
+	if (client->getRegist() & PASS && client->getRegist() & NICK && client->getRegist() & USER)
+    {
+    	std::cout << C_RED << "Regist :" <<(int)client->getRegist() << C_NRML << std::endl;
+		welcomeMsg(client->getClientFd(), RPL_WELCOME, ":Welcome to the Internet Relay Network", client->getNickName());
+		client->setRegist(REGI);
+    }
 }

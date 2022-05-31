@@ -204,7 +204,7 @@ void Server::relayEvent()
 				// TODO : 명령어 순서대로 처리하는 함수 추가하기
 				print_stringVector(cmd);
 				// 클라이언트가 등록이 안되어있을 때
-				if (!tmp->isRegist())
+				if (!(tmp->getRegist() & REGI))
 				{
 					_command.welcome(cmd, (_clientList.find(_pollClient[i].fd))->second, _clientList);
 				}
@@ -263,4 +263,22 @@ int Server::execute(){
 	}
 	close(_serverSocketFd);
 	return (0);
+}
+
+
+void Server::removeUnconnectClient(int fd)
+{
+	Client *tmp = findClient(fd);
+	
+	std::string str = tmp->getMsgBuffer();
+	send(fd, str.c_str(), str.length(), 0);
+	
+	std::cout << C_BLUE <<"----- in removeclient sendMsg to <" << fd << "> -------\n";
+	std::cout << str;
+	std::cout << "ㄴ--------------------------\n" << std::endl << C_NRML;
+	str.clear();
+	tmp->clearMsgBuffer();
+	getClientList().erase(fd);
+    close(fd);
+    delete tmp;
 }
