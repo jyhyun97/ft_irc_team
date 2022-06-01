@@ -167,6 +167,8 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		_command.quit(cmd_vec, client);
 	// else if (cmd_vec[0] == "WHOIS")
 	// 	_command.whois(cmd_vec, client);
+	if (cmd_vec[0] == "PASS" || cmd_vec[0] == "USER")
+		_command.alreadyRegist(client);
 	else //미구현 커맨드 알림 또는 커맨드 무시
 		std::cout << "undefined cmd\n";
 }
