@@ -45,3 +45,11 @@ std::vector<int>::iterator Channel::findClient(int fd)
 	}
 	return (_myClientFdList.end());
 }
+
+bool Channel::checkClientInChannel(int fd)
+{
+	std::vector<int>::iterator it = findClient(fd);
+	if (it != _myClientFdList.end())
+		return true;
+	return false;
+}

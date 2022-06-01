@@ -1,6 +1,25 @@
 #include "../include/Server.hpp"
 #include "../include/Command.hpp"
 
+
+//nick
+//ERR_NONICKNAMEGIVEN  431   ???
+#define ERR_ERRONEUSNICKNAME	"432"
+#define ERR_NICKNAMEINUSE		"433"
+//ERR_NICKCOLLISION     434  다른 서버와 닉네임 충돌이므로 지금은 필요 없음
+
+//privmsg
+#define ERR_NOSUCHNICK "401" //"<nickname> :No such nick/channel"
+
+
+//kick
+// #define ERR_NEEDMOREPARAMS "461" // "<command> :Not enough parameters"
+// #define ERR_BADCHANMASK  476 "<channel> :Bad Channel Mask"
+#define ERR_USERNOTINCHANNEL	"441" //"<nick> <channel> :They aren't on that channel"
+#define ERR_NOSUCHCHANNEL		"403" //"<channel name> :No such channel"
+#define ERR_CHANOPRIVSNEEDED	"482" //"<channel> :You're not channel operator"
+#define ERR_NOTONCHANNEL		"442" //"<channel> :You're not on that channel"
+
 bool Command::isLetter(char c)
 {
 		if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'))
@@ -64,36 +83,31 @@ void Command::nick(std::vector<std::string> s, Client *client)
     if (isDuplication(s[1], _server->getClientList()))
     {
 		// ERR_NICKNAMEINUSE
-		makeNumericReply(client->getClientFd(), "433", s[1] +" :Nickname is already in use");
+		makeNumericReply(client->getClientFd(), ERR_NICKNAMEINUSE, s[1] +" :Nickname is already in use");
         return;
     }
     if (!nickValidate(s[1]))
     {
 		//ERR_ERRONEUSNICKNAME
-		makeNumericReply(client->getClientFd(), "432", s[1] + " :Erroneus nickname");
+		makeNumericReply(client->getClientFd(), ERR_ERRONEUSNICKNAME, s[1] + " :Erroneus nickname");
         return;
     }
 
 	// TODO : _server.clientList 전체에 보내도 된다?
-
-
 	std::vector<std::string> participatingChannelName = client->getMyChannelList();
 	// 닉네임 변경한 클라이언트에게 바뀌었다는 정보 전송
-	if (participatingChannelName.size() == 0)
-	{
-		makeCommandReply(client->getClientFd(), "NICK", s[1]);
-	}
-	else
+	makeCommandReply(client->getClientFd(), "NICK", s[1]);
+	if (participatingChannelName.size() != 0)
 	{
 		// 참여 중인 모든 채널에 닉네임 변경했다는 정보 전송
 		std::vector<std::string>::iterator participatingChannelNameIt = participatingChannelName.begin();
+		// fd 중복을 피하기 위해 set 사용
 		std::set<int> fdList;
 		while (participatingChannelNameIt != participatingChannelName.end())
 		{
 			Channel *channel = _server->findChannel(*participatingChannelNameIt);
 			if (channel == NULL)
 				continue;
-			// fd 중복을 피하기 위해 set 사용
 			// 해당 채널에 참여 중인 클라이언트들에게 닉네임 변경 정보 전송
 			std::vector<int> fdsInChannel = channel->getMyClientFdList();
 			std::vector<int>::iterator fdsInChannelIt = fdsInChannel.begin();
@@ -102,17 +116,17 @@ void Command::nick(std::vector<std::string> s, Client *client)
 				if (client->getClientFd() != (*fdsInChannelIt))
 				{
 					fdList.insert(*fdsInChannelIt);
-					//makeCommandReply(*fdsInChannelIt, "NICK", s[1]);
 				}
 				fdsInChannelIt++;
 			}
-			//fdList.~set();
 			participatingChannelNameIt++;
 		}
 		std::set<int>::iterator fdsIt = fdList.begin();
 		while (fdsIt != fdList.end())
 		{
-			makeCommandReply(*fdsIt, "NICK", s[1]);
+			Client *tmp = _server->findClient(*fdsIt);
+			// makeCommandReply(*fdsIt, "NICK", s[1]); :뒤에 닉네임이 tmp 닉네임이 아니어서 이 함수 못 씀
+			tmp->appendMsgBuffer(":" + client->getNickName() + " NICK " + s[1] + "\r\n");
 			fdsIt++;
 		}
 		fdList.clear();
@@ -156,33 +170,77 @@ void Command::join(std::vector<std::string> s, Client *client)
     }
 }
 
+// ERR_NEEDMOREPARAMS 461 "<command> :Not enough parameters"
+// ERR_BADCHANMASK  476 "<channel> :Bad Channel Mask"
+// ERR_USERNOTINCHANNEL 441 "<nick> <channel> :They aren't on that channel"
+// ERR_NOSUCHCHANNEL  403 "<channel name> :No such channel"
+// ERR_CHANOPRIVSNEEDED  482 "<channel> :You're not channel operator"
+// ERR_NOTONCHANNEL  442 "<channel> :You're not on that channel"
 void Command::kick(std::vector<std::string> s, Client *client)
 {
     std::vector<std::string> channelNames = split(s[1], ",");
 	std::vector<std::string>::iterator channelNameIt = channelNames.begin();
 	while (channelNameIt != channelNames.end())
     {
+		// 채널 검색
         Channel *channel = _server->findChannel(*channelNameIt);
-        int operatorFd = channel->getMyOperator();
-        if (operatorFd != client->getClientFd())
-        {
-            //TODO : #42seoul You're not channel operator
-            channelNameIt++;
-            continue;
-        }
-        // TODO : 유저도 list 돌기 ex) aa,bb,cc...
-		//std::vector<std::string> user = split(s[2], ",");
-        Client *kickedClient = _server->findClient(s[2]);
-        std::vector<int>::iterator it = channel->findClient(kickedClient->getClientFd());
-        if (it == channel->getMyClientFdList().end()){
-            channelNameIt++;
-            continue;
-        }
-        std::string msg = ":" + client->getNickName() + " KICK " + *channelNameIt + " " + s[2] + " " + appendStringColon(3, s) + "\r\n";
-        client->appendMsgBuffer(msg);
-        leaveMessage(msg, client, channel);
-        channel->removeClientList(kickedClient->getClientFd());
-        //TODO : 방장이 방장 추방 -> 방장위임
+		if (channel == NULL)
+		{
+			makeNumericReply(client->getClientFd(), ERR_NOSUCHCHANNEL, *channelNameIt + " :No such channel");
+			channelNameIt++;
+			continue;
+		}
+
+		std::vector<std::string> kickedUserNickName = split(s[2], ",");
+		std::vector<std::string>::iterator kickedUserNickNameIt = kickedUserNickName.begin();
+		Client *kickedClient;
+		while (kickedUserNickNameIt != kickedUserNickName.end())
+		{
+			// 서버에 유저가 존재하는지 확인
+			kickedClient = _server->findClient(*kickedUserNickNameIt);
+			if (kickedClient == NULL)
+			{
+				//TODO : IRCnet 에서는  : No such nick/channel 이거 뜨는데 어떻게 해야하려나
+				makeNumericReply(client->getClientFd(), "401", *kickedUserNickNameIt + " :No such nick/channel");
+				// makeNumericReply(client->getClientFd(), "441", *kickedUserNickNameIt + " " + *channelNameIt + " :They aren't on that channel");
+				kickedUserNickNameIt++;
+				continue;
+			}
+			else
+			{
+				// 방장인지 확인
+				int operatorFd = channel->getMyOperator();
+				if (operatorFd != client->getClientFd())
+				{
+					makeNumericReply(client->getClientFd(), ERR_CHANOPRIVSNEEDED, *channelNameIt + " :You're not channel operator");
+					kickedUserNickNameIt++;
+					continue;
+				}
+				// 해당 채널 안에 클라이언트가 속해 있는지 확인
+				if (!channel->checkClientInChannel(kickedClient->getClientFd())){
+					makeNumericReply(client->getClientFd(), ERR_USERNOTINCHANNEL, *kickedUserNickNameIt + " " + *channelNameIt + " :They aren't on that channel");
+					kickedUserNickNameIt++;
+					continue;
+				}
+				// 해당 채널에서 제거
+				std::string msg = ":" + client->getNickName() + " KICK " + *channelNameIt + " " + *kickedUserNickNameIt + " " + appendStringColon(3, s) + "\r\n";
+				client->appendMsgBuffer(msg);
+				leaveMessage(msg, client, channel);
+				channel->removeClientList(kickedClient->getClientFd());
+				//TODO : 방장이 방장 추방 -> 방장위임
+				if (channel->getMyClientFdList().empty() == true)
+				{
+					_server->getChannelList().erase(channel->getChannelName());
+					delete channel;
+				}
+				else
+				{
+					channel->setMyOperator(*(channel->getMyClientFdList().begin()));
+				}
+			}
+			kickedUserNickNameIt++;
+		}
+
         channelNameIt++;
     }
 }
@@ -198,7 +256,7 @@ void Command::privmsg(std::vector<std::string> s, Client *client)
             {
 				//403 ERR_NOSUCHCHANNEL
 				// IRCnet 에서는 401 로 통일된 듯
-				makeNumericReply(client->getClientFd(), "403", *targetNameIt + " :No such channel");
+				makeNumericReply(client->getClientFd(), ERR_NOSUCHCHANNEL, *targetNameIt + " :No such channel");
 				//client->appendMsgBuffer("401 " + client->getNickName() + " " + *targetNameIt + " :No such nick/channel\r\n");
                 targetNameIt++;
                 continue;
