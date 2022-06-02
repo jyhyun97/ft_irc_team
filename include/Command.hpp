@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include "Channel.hpp"
 #include "Client.hpp"
 #include "Util.hpp"
@@ -29,6 +30,10 @@ private:
 	bool channelValidate(std::string s);
 	Server *_server;
 	std::string makeFullname(int fd);
+
+	void makePrivMessage(Client *client, std::string senderName, std::string receiver, std::string msg);
+	void channelMessage(std::string msg, Client *client, Channel *channel);   // PRIVMSG <msgtarget> <text to be sent>
+	void leaveMessage(std::string msg, Client *client, Channel *channel);
 public:
 	// Command();
 	//Command(Server &server);
@@ -38,28 +43,23 @@ public:
 	void welcome(std::vector<std::string> cmd, Client *client, std::map<int, Client *> clientList);
 	void user(std::vector<std::string> s, Client *client);
 	void pass(std::vector<std::string> s, Client *client);
-	
+
 	// 2 hyahn
 	void privmsg(std::vector<std::string> s, Client *client);
 	void nick(std::vector<std::string> s, Client *client);
 	void kick(std::vector<std::string> s, Client *client);
-	
+
 	// 3 jeonhyun
 	void join(std::vector<std::string> s, Client *client);
 	void part(std::vector<std::string> s, Client *client);
 	void quit(std::vector<std::string> s, Client *client);
-	
+
 	// void notice
 	void pong(std::vector<std::string> s, Client *client);
-	
 
-	void personalMessage(std::string msg, std::string senderName, Client * receiver);
-	void channelPersonalMessage(std::string msg, std::string senderName, Client *client, std::string channelName);
-	void channelMessage(std::string msg, Client *client, Channel *channel);   // PRIVMSG <msgtarget> <text to be sent>
-	void leaveMessage(std::string msg, Client *client, Channel *channel);
 	//todo : private
-	
-	
+
+
 
 	// void whois(std::vector<std::string> s, Client *client)
 	// {

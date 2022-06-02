@@ -31,6 +31,7 @@ public :
 	void addMyClientList(int fd);
 	void removeClientList(int fd);
 	std::vector<int>::iterator findClient(int fd);
+	bool checkClientInChannel(int fd);
 	//서버에서 클라이언트가 나가는 이벤트가 일어나면?
 	//서버에서 그 사실을 채널로 전달 후 채널에서 방장인 지 확인 후 방장 변경 실행(주도권이 채널)
 };

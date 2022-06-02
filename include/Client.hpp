@@ -42,6 +42,7 @@ class Client{
 		std::vector<std::string> &getMyChannelList();
 		std::vector<std::string>::iterator findChannel(std::string item);
 		void removeChannelList(std::vector<std::string>::iterator it);
+		void removeChannel(std::string serverName);
         // getmyChannelList();
 		// setmyChannelList();
 		// get각종이름();
