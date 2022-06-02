@@ -1,5 +1,6 @@
 #include "../include/Server.hpp"
 #include "../include/Command.hpp"
+#include "../include/Define.hpp"
 
 bool Command::isLetter(char c)
 {
@@ -46,6 +47,14 @@ bool Command::nickValidate(std::string s)
     }
     return true;
 }
+// bool Command::channelValidate(std::string s)
+// {
+// 	//length 200글자 이하, 맨 앞글자는 &나 #으로 시작, ' ', ',', '^G'가 포함되지 않을 것
+// 	if (s.length() <= 200 && (s[0] == '&' || s[0] == '#') &&
+// 		s.find(' ') == std::string::npos && s.find(',') == std::string::npos && s.find(7) == std::string::npos)
+// 		return true;
+// 	return false;
+// }
 
 Command::Command(Server *server){
     _server = server;
@@ -121,25 +130,40 @@ void Command::nick(std::vector<std::string> s, Client *client)
     client->setNickName(s[1]);
 };
 
-void Command::user(std::vector<std::string> s, Client *client)
-{
-    client->setUser(client->getNickName(), s[2], s[3], appendStringColon(4, s));
-};
 
 void Command::join(std::vector<std::string> s, Client *client)
 {
+	//ERR_NEEDMOREPARAMS	인자 부족할 시 O
+	//ERR_BANNEDFROMCHAN	밴 기능 X
+	//ERR_INVITEONLYCHAN	초대전용채널 기능 X 
+	//ERR_BADCHANNELKEY		채널 비번 기능 X
+	//ERR_CHANNELISFULL		채널 인원제한 기능 X
+	//ERR_BADCHANMASK		지금은 사용되지 않는 번호라 X
+	//ERR_NOSUCHCHANNEL		채널 없는 경우 추가하게 만들어 놔서 X
+	//ERR_TOOMANYCHANNELS	채널 가입 제한 개수 X
+	//RPL_TOPIC				토픽 기능 X
+
+	//추가한 것
+	//- 인자 부족한 경우 예외처리 추가(ERR_NEEDMOREPARAMS)
+	//- 채널 이름 유효성 검사하는 channelValidate함수 추가
+	//  -> 불가능. 애초에 메시지가 JOIN "#abc defa"이렇게 넣으면 JOIN #abc defa 로 들어온다
+	//  -> 파싱 자체가 불가능해서 구현 안해도 될 듯 irssi도 구현 안 되어 있음
+
+	if (s.size() < 2)
+	{
+		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "Not enough parameters");
+		return ;
+	}
     std::vector<std::string> joinChannel = split(s[1], ",");
     std::vector<std::string>::iterator it = joinChannel.begin();
     while (it != joinChannel.end())
     {
-        std::map<std::string, Channel *>::iterator findChannelIt = _server->getChannelList().find(*it);
-
+		std::map<std::string, Channel *>::iterator findChannelIt = _server->getChannelList().find(*it);
         if (findChannelIt != _server->getChannelList().end())
         {
             std::string channelName = (*findChannelIt).second->getChannelName();
             (*findChannelIt).second->addMyClientList(client->getClientFd());
             client->addChannelList(channelName);
-			// sendJoinMsg(client->getClientFd(), channelName);
 			allInChannelMsg(client->getClientFd(), channelName, "JOIN", "");
         }
         else
@@ -147,12 +171,10 @@ void Command::join(std::vector<std::string> s, Client *client)
             _server->addChannelList(*it, client->getClientFd());
             _server->findChannel(*it)->addMyClientList(client->getClientFd());
             client->addChannelList(*it);
-			// sendJoinMsg(client->getClientFd(), *it);
 			allInChannelMsg(client->getClientFd(), *it, "JOIN", "");
         }
         nameListMsg(client->getClientFd(), *it);
         it++;
-    // 353 newmember = #채널 :@방장 유저 유저 유저
     }
 }
 
@@ -323,20 +345,23 @@ void Command::leaveMessage(std::string msg, Client *client, Channel *channel)
 }
 
 
-void Command::pass(std::vector<std::string> s, Client *client)
-{
-    if (s[1] != _server->getPass())
-    {
-        client->appendMsgBuffer("464 " + client->getNickName() + " :Password incorrect\r\n");
-        return;
-    }
-} // PASS <password>
 
 void Command::part(std::vector<std::string> s, Client *client)
 {
-    //[PART] [#aa,#bb]
-	//if (아무 인자도 입력하지 않음)
-		// 에러 메세지 전송 처리
+	//ERR_NEEDMOREPARAMS	인자 부족 O
+	//ERR_NOSUCHCHANNEL		서버에 채널 없을 때 O
+	//ERR_NOTONCHANNEL		클라이언트가 채널에 없을 때 O
+	
+	//추가한 것
+	//- 인자 부족한 경우 예외처리 추가(ERR_NEEDMOREPARAMS)
+	//- PART 메세지 보내는 부분 allInChannelMsg 함수로 교체
+	//- 나가려는 채널이 서버에 없는 경우 예외처리 추가(ERR_NOSUCHCHANNEL)
+	//- 채널이 서버에 있으나 클라이언트가 가입되어 있지 않은 경우 예외처리 추가(ERR_NOTONCHANNEL)
+	if (s.size() < 2)
+	{
+		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "Not enough parameters");
+		return ;
+	}
 	std::vector<std::string> partChannel = split(s[1], ",");
 	std::vector<std::string>::iterator partChannelIt = partChannel.begin();
 	while (partChannelIt != partChannel.end())
@@ -344,12 +369,11 @@ void Command::part(std::vector<std::string> s, Client *client)
 		std::vector<std::string>::iterator searchChannelNameIt = client->findChannel(*partChannelIt);
 		if (searchChannelNameIt != client->getMyChannelList().end())
         {
+			allInChannelMsg(client->getClientFd(), *searchChannelNameIt, "PART", appendStringColon(2, s));
 			Channel *tmp = _server->findChannel(*partChannelIt);
             tmp->removeClientList(client->getClientFd());
-			client->appendMsgBuffer(":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " PART " + *searchChannelNameIt + "\r\n");
-            std::string msg = ":" + client->getNickName() + "!" + client->getUserName() + "@" + client->getServerName() + " PART " + *searchChannelNameIt + "\r\n";
-            leaveMessage(msg, client, tmp);
 			client->removeChannelList(searchChannelNameIt);
+
             if (tmp->getMyClientFdList().empty() == true)
             {
                 _server->getChannelList().erase(tmp->getChannelName());
@@ -360,10 +384,12 @@ void Command::part(std::vector<std::string> s, Client *client)
                 tmp->setMyOperator(*(tmp->getMyClientFdList().begin()));
             }
         }
-        else //없으면 에러메세지
+        else
         {
-			// if (아예 없는 채널을 떠나려고함)
-			// else if (서버에 있는데 참여하지 않은 채널을 떠나려고함)
+			if (_server->getChannelList().find(*partChannelIt) == _server->getChannelList().end())
+				makeNumericReply(client->getClientFd(), ERR_NOSUCHCHANNEL, *partChannelIt + "No such channel");
+			else
+				makeNumericReply(client->getClientFd(), ERR_NOTONCHANNEL, *partChannelIt + "You're not on that channel");
         }
         partChannelIt++;
     }
@@ -371,23 +397,14 @@ void Command::part(std::vector<std::string> s, Client *client)
 
 void Command::quit(std::vector<std::string> s, Client *client)
 {
+	//추가한 것
+	//주석 삭제
 	std::vector<std::string>::iterator channelListInClientClassIt = client->getMyChannelList().begin();
  	while (channelListInClientClassIt != client->getMyChannelList().end())
     {
         Channel *tmp = _server->findChannel(*channelListInClientClassIt);
-        // channel class -> myclientList 에서 삭제
         tmp->removeClientList(client->getClientFd());
-
-// void Command::allInChannelMsg(int target, std::string channelName, std::string command)
 		allInChannelMsg(client->getClientFd(), tmp->getChannelName(), "PART", appendStringColon(1,s));
-        // std::string msg = ":" + makeFullname(client->getClientFd()) + " PART " + tmp->getChannelName() + " " + appendStringColon(1, s) + "\r\n";
-		// void Command::makeNumericReply(int fd, std::string flag, std::string str)
-
-		// 채널 내 자신을 제외한 사람들에게 메세지 전송
-		//std::cout << "leave msg check " << msg <<std::endl;
-        // leaveMessage(msg, client, tmp);
-
-
         if (tmp->getMyClientFdList().empty() == true)
         {
             _server->getChannelList().erase(tmp->getChannelName());
@@ -395,72 +412,10 @@ void Command::quit(std::vector<std::string> s, Client *client)
         }
         channelListInClientClassIt++;
     }
-    //_server.clientList 에서 지우기
     _server->getClientList().erase(client->getClientFd());
     close(client->getClientFd());
     delete client;
-    //TODO : 현재 클라이언트 소켓 삭제
-} // QUIT [<Quit message>]
-
-//:syrk!kalt@millennium.stealth.net QUIT :Gone to have lunch
-//: 닉넴 ! 유저네임 @ 서버네임 QUIT : 메세지
-//
-
-void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int, Client *> clientList)
-{
-	//닉 체크하고 최초 닉네임 설정..
-	//TODO : clientList 길이 체크하고 3개 명령어 다 처리한 후 welcome 전송
-	//유저 설정
-	std::vector<std::string>::iterator cmd_it = cmd.begin();
-	while (cmd_it != cmd.end())
-	{
-		std::vector<std::string> result = split(*cmd_it, " ");
-		if (result[0] == "PASS") //패스워드를 아예 안넣을 경우 pass 명령어를 타지 않음
-		{
-            if (result[1] != _server->getPass())
-            {
-                std::cout << "비번안맞음" << std::endl;
-            	client->appendMsgBuffer(ERR_PASSWDMISMATCH);
-            	client->appendMsgBuffer(" " + client->getNickName() + " :Password incorrect\r\n");
-
-                // TODO : 위에 password 틀렸다는 메세지는 전송 안해도 괜찮을까?
-                _server->getClientList().erase(client->getClientFd());
-                close(client->getClientFd());
-				return ;
-            }
-		}
-		else if (result[0] == "NICK")
-		{
-			if (!nickValidate(result[1]))
-			{
-				std::cout << "닉네임규칙안맞음\n";
-				// client->appendMsgBuffer(": 432 test :nick rule\r\n");
-			}
-			if (isDuplication(result[1], clientList))
-			{
-				std::cout << "nick dup\n";
-				result[1].append("_");
-				// client->appendMsgBuffer(": 433 test :nick dup\r\n");
-
-                // 433     ERR_NICKNAMEINUSE
-                // "<nick> :Nickname is already in use"
-            }
-			std::cout << "nick name check: " << result[1] << std::endl;
-			client->setNickName(result[1]);
-		}
-		else if (result[0] == "USER")
-		{
-			user(result, client);
-		}
-		cmd_it++;
-	}
-	// print_clientList(clientList);
-	if (client->getNickName().empty() == false && client->getUserName().empty() == false/* && PASS 여부*/)
-    {
-    	welcomeMsg(client->getClientFd(), RPL_WELCOME, ":Welcome to the Internet Relay Network", client->getNickName());
-    }
 }
-
 
 
 
@@ -567,4 +522,93 @@ void Command::makeCommandReply(int fd, std::string command, std::string str)
 	tmp->appendMsgBuffer(" ");
 	tmp->appendMsgBuffer(str);
 	tmp->appendMsgBuffer("\r\n");
+}
+
+void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int, Client *> clientList)
+{
+	std::vector<std::string>::iterator cmd_it = cmd.begin();
+	while (cmd_it != cmd.end())
+	{
+		std::vector<std::string> result = split(*cmd_it, " ");
+		if (result[0] == "PASS")
+		{
+			if (client->getRegist() & PASS)
+			{
+				makeNumericReply(client->getClientFd(), ERR_ALREADYREGISTRED, ":You are already checked Password");
+				return ;
+			}
+			if (result.size() == 1)
+			{
+				makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, ":Not enough parameters...\nYou are not Input Password");
+				return ;
+			}
+			if (result[1] == _server->getPass())
+			{
+				client->setRegist(PASS);
+			}
+			else
+            {
+				makeNumericReply(client->getClientFd(), ERR_PASSWDMISMATCH, ":Server Password Incorrect");
+				_server->removeUnconnectClient(client->getClientFd());
+				return ;
+            } 
+		}
+		else if (client->getRegist() & PASS && result[0] == "NICK")
+		{
+			if (!nickValidate(result[1]))
+			{
+				makeNumericReply(client->getClientFd(), ERR_ERRONEUSNICKNAME, result[1] + " :Erroneus Nickname");
+				return ;
+			}
+			if (isDuplication(result[1], clientList))
+			{
+				if (client->getNickName() == result[1]) // 닉중복인데 자기 자신과 중복
+					return;
+				std::string dup = result[1];
+				result[1].append("_");
+				makeNumericReply(client->getClientFd(), ERR_NICKNAMEINUSE, ":" + dup + " is already owned");
+			}
+			client->setNickName(result[1]);
+			client->setRegist(NICK);
+			makeCommandReply(client->getClientFd(), "NICK", result[1]);
+		}
+		else if (client->getRegist() & PASS && client->getRegist() & NICK && result[0] == "USER")
+		{
+			if (result.size() != 5)
+			{
+				makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "USER :Not enough parameters...\n/USER <username> <hostname> <servername> <:realname>");
+				return ;
+			}
+			client->setUser(result[1], result[2], result[3], appendStringColon(4, result));
+			client->setRegist(USER);
+		}
+		else if (result[0] != "CAP")
+		{
+			// 정상등록과정에서 벗어난 애들은 모두 여기로
+			if (!(client->getRegist() & PASS))
+			{
+				// irssi에서 /connect시 PASS인자를 를 비워두고 connecet 하면 PASS 없이 NICK과 USER가 먼저 온다.
+				// /connect 할 때 마다 새 소켓을 연결하므로 PASS 설정에 실패했다면 연결을 끊어버리는 방법으로 결정
+				makeNumericReply(client->getClientFd(), ERR_NOTREGISTERED, ":You have not registered Server's Password");
+				_server->removeUnconnectClient(client->getClientFd());
+			}
+			else if (!(client->getRegist() & NICK))
+				makeNumericReply(client->getClientFd(), ERR_NOTREGISTERED, ":You have not registered Nickname");
+			else if (!(client->getRegist() & USER))
+				makeNumericReply(client->getClientFd(), ERR_NOTREGISTERED, ":You have not registered USER info");
+			return ;
+		}
+		cmd_it++;
+	}
+	// 정상적인 등록 과정을 모두 거쳤다면
+	if (client->getRegist() & PASS && client->getRegist() & NICK && client->getRegist() & USER)
+    {
+		welcomeMsg(client->getClientFd(), RPL_WELCOME, ":Welcome to the Internet Relay Network", client->getNickName());
+		client->setRegist(REGI);
+    }
+}
+
+void	Command::alreadyRegist(Client *client)
+{
+	makeNumericReply(client->getClientFd(), ERR_ALREADYREGISTRED, ":You are already registed");
 }
