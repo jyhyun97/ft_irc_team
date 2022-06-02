@@ -167,6 +167,8 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		_command.quit(cmd_vec, client);
 	// else if (cmd_vec[0] == "WHOIS")
 	// 	_command.whois(cmd_vec, client);
+	if (cmd_vec[0] == "PASS" || cmd_vec[0] == "USER")
+		_command.alreadyRegist(client);
 	else //미구현 커맨드 알림 또는 커맨드 무시
 		std::cout << "undefined cmd\n";
 }
@@ -204,7 +206,7 @@ void Server::relayEvent()
 				// TODO : 명령어 순서대로 처리하는 함수 추가하기
 				print_stringVector(cmd);
 				// 클라이언트가 등록이 안되어있을 때
-				if (!tmp->isRegist())
+				if (!(tmp->getRegist() & REGI))
 				{
 					_command.welcome(cmd, (_clientList.find(_pollClient[i].fd))->second, _clientList);
 				}
@@ -263,4 +265,22 @@ int Server::execute(){
 	}
 	close(_serverSocketFd);
 	return (0);
+}
+
+
+void Server::removeUnconnectClient(int fd)
+{
+	Client *tmp = findClient(fd);
+	
+	std::string str = tmp->getMsgBuffer();
+	send(fd, str.c_str(), str.length(), 0);
+	
+	std::cout << C_BLUE <<"----- in removeclient sendMsg to <" << fd << "> -------\n";
+	std::cout << str;
+	std::cout << "ㄴ--------------------------\n" << std::endl << C_NRML;
+	str.clear();
+	tmp->clearMsgBuffer();
+	getClientList().erase(fd);
+    close(fd);
+    delete tmp;
 }

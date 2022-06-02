@@ -1,7 +1,7 @@
 #include "../include/Client.hpp"
 #include <iostream>
 
-Client::Client(int clientFd) : _clientFd(clientFd) {}
+Client::Client(int clientFd) : _clientFd(clientFd), _regist(0) {}
 
 std::string Client::getMsgBuffer()
 {
@@ -25,13 +25,6 @@ void Client::removeChannelList(std::vector<std::string>::iterator it)
 {
 	_myChannelList.erase(it);
 	// if 이레이즈 실패시 에러처리?
-}
-
-bool Client::isRegist()
-{
-	if (_nickName == "" || _userName == "" || _hostName == "" || _realName == "" || _serverName == "")
-		return (false);
-	return(true);
 }
 
 std::vector<std::string> & Client::getMyChannelList()
@@ -109,4 +102,15 @@ void Client::DebugPrint()
 	std::cout << "myChannelList : " << std::endl;
 	// print_channelList(_myChannelList);
 	std::cout << "msgBuffer : " << _msgBuffer << std::endl;
+}
+
+void Client::setRegist(int bit)
+{
+	_regist |= bit;
+}
+
+unsigned char Client::getRegist()
+{
+	return (_regist);
+
 }
