@@ -1,25 +1,6 @@
 #include "../include/Server.hpp"
 #include "../include/Command.hpp"
 
-
-//nick
-//ERR_NONICKNAMEGIVEN  431   ???
-#define ERR_ERRONEUSNICKNAME	"432"
-#define ERR_NICKNAMEINUSE		"433"
-//ERR_NICKCOLLISION     434  다른 서버와 닉네임 충돌이므로 지금은 필요 없음
-
-//privmsg
-#define ERR_NOSUCHNICK "401" //"<nickname> :No such nick/channel"
-
-
-//kick
-// #define ERR_NEEDMOREPARAMS "461" // "<command> :Not enough parameters"
-// #define ERR_BADCHANMASK  476 "<channel> :Bad Channel Mask"
-#define ERR_USERNOTINCHANNEL	"441" //"<nick> <channel> :They aren't on that channel"
-#define ERR_NOSUCHCHANNEL		"403" //"<channel name> :No such channel"
-#define ERR_CHANOPRIVSNEEDED	"482" //"<channel> :You're not channel operator"
-#define ERR_NOTONCHANNEL		"442" //"<channel> :You're not on that channel"
-
 bool Command::isLetter(char c)
 {
 		if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'))
@@ -80,6 +61,11 @@ void Command::pong(std::vector<std::string> s, Client *client){
 //ERR_NICKCOLLISION     434  다른 서버와 닉네임 충돌이므로 지금은 필요 없음
 void Command::nick(std::vector<std::string> s, Client *client)
 {
+	if (s.size() < 2)
+	{
+		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "NICK :Not enough parameters");
+		return;
+	}
     if (isDuplication(s[1], _server->getClientList()))
     {
 		// ERR_NICKNAMEINUSE
@@ -178,6 +164,12 @@ void Command::join(std::vector<std::string> s, Client *client)
 // ERR_NOTONCHANNEL  442 "<channel> :You're not on that channel"
 void Command::kick(std::vector<std::string> s, Client *client)
 {
+	int sLength = s.size();
+	if (sLength < 3)
+	{
+		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "KICK :Not enough parameters");
+		return;
+	}
     std::vector<std::string> channelNames = split(s[1], ",");
 	std::vector<std::string>::iterator channelNameIt = channelNames.begin();
 	while (channelNameIt != channelNames.end())
@@ -223,10 +215,15 @@ void Command::kick(std::vector<std::string> s, Client *client)
 					continue;
 				}
 				// 해당 채널에서 제거
-				std::string msg = ":" + client->getNickName() + " KICK " + *channelNameIt + " " + *kickedUserNickNameIt + " " + appendStringColon(3, s) + "\r\n";
+				std::string msg;
+				if (sLength >= 3)
+					msg = ":" + client->getNickName() + " KICK " + *channelNameIt + " " + *kickedUserNickNameIt + " " + appendStringColon(3, s) + "\r\n";
+				else
+					msg = ":" + client->getNickName() + " KICK " + *channelNameIt + " " + *kickedUserNickNameIt + "\r\n";
 				client->appendMsgBuffer(msg);
 				leaveMessage(msg, client, channel);
 				channel->removeClientList(kickedClient->getClientFd());
+				kickedClient->removeChannel(*channelNameIt);
 				//TODO : 방장이 방장 추방 -> 방장위임
 				if (channel->getMyClientFdList().empty() == true)
 				{
@@ -246,6 +243,11 @@ void Command::kick(std::vector<std::string> s, Client *client)
 }
 void Command::privmsg(std::vector<std::string> s, Client *client)
 {
+	if (s.size() < 2)
+	{
+		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "PRIVMSG :Not enough parameters");
+		return;
+	}
 	std::vector<std::string> target = split(s[1], ",");
 	std::vector<std::string>::iterator targetNameIt = target.begin();
 	while (targetNameIt != target.end())

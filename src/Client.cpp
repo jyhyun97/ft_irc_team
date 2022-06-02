@@ -27,6 +27,13 @@ void Client::removeChannelList(std::vector<std::string>::iterator it)
 	// if 이레이즈 실패시 에러처리?
 }
 
+void Client::removeChannel(std::string serverName)
+{
+	std::vector<std::string>::iterator it = findChannel(serverName);
+	if (it != _myChannelList.end())
+		removeChannelList(it);
+}
+
 bool Client::isRegist()
 {
 	if (_nickName == "" || _userName == "" || _hostName == "" || _realName == "" || _serverName == "")
