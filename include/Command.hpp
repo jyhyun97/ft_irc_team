@@ -76,6 +76,8 @@ public:
 	void sendJoinMsg(int joinfd, std::string channelName);
 	void allInChannelMsg(int target, std::string channelName, std::string command, std::string msg);
 	void nameListMsg(int fd, std::string channelName);
+	void alreadyRegist(Client *client);
+
 };
 
 #endif

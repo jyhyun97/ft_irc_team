@@ -85,6 +85,7 @@ public:
 	void relayEvent();
 
 	int execute(); // 소켓통신 실행함수();
+	void removeUnconnectClient(int fd);
 };
 
 #endif
