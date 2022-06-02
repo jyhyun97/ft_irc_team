@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Client.hpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/02 16:27:02 by swang             #+#    #+#             */
+/*   Updated: 2022/06/02 16:28:16 by swang            ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
@@ -21,9 +33,8 @@ class Client{
 		int _clientFd;
 		unsigned char _regist;
 		std::vector<std::string> _myChannelList;
-		std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
+		std::string _msgBuffer;
 		std::string _recvBuffer;
-		// Server *server;
 	public :
 		Client(int clientFd);
 		std::string getMsgBuffer();
@@ -47,16 +58,8 @@ class Client{
 		std::vector<std::string>::iterator findChannel(std::string item);
 		void removeChannelList(std::vector<std::string>::iterator it);
 		void removeChannel(std::string serverName);
-        // getmyChannelList();
-		// setmyChannelList();
-		// get각종이름();
-		// set각종이름();
-		// partMyChannel(); //vector.erase 클라이언트가 채널을 나갈 때
-		//TODO : part명령어가 여러개의 채널을 동시에 떠날 수 있는지 체크하기
-
 		void setRegist(int bit);
 		unsigned char getRegist();
-
 };
 
 

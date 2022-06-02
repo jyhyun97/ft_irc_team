@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Util.cpp                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/02 16:26:25 by swang             #+#    #+#             */
+/*   Updated: 2022/06/02 16:26:26 by swang            ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../include/Util.hpp"
 
 # define C_NRML "\033[0m"
@@ -14,7 +26,7 @@ std::string appendStringColon(size_t startIndex, std::vector<std::string> msg)
 	}
 	result.append(msg[msg.size() - 1]);
 	return result;
-}//privmsg #seoul
+}
 
 std::vector<std::string> split(std::string &line, std::string s)
 {
@@ -29,10 +41,6 @@ std::vector<std::string> split(std::string &line, std::string s)
 	}
 	if (line != "")
 		tab.push_back(line);
-	// for (size_t i = 0; i < tab.size(); i++)
-	// {
-	// 	std::cout << "[[" <<  tab[i] << "]]" << std::endl;
-	// }
 	return tab;
 }
 

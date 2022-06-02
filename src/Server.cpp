@@ -1,9 +1,17 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/02 16:37:51 by swang             #+#    #+#             */
+/*   Updated: 2022/06/02 16:37:53 by swang            ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../include/Server.hpp"
 #include <fcntl.h>
-// #include <signal.h>
-
-// #include <netinet/tcp.h>
-
 
 int Server::pollingEvent(){
 	_clientLen = sizeof(_clientAddr);
@@ -19,11 +27,8 @@ int Server::pollingEvent(){
 		return -1;
 	}
 
-	//TODO : accept 예외처리
 	_clientList.insert(std::pair<int, Client *>(_clientFd, new Client(_clientFd)));
 	std::cout << C_RED <<"\n\n*Accept Client fd: " << _clientList.find(_clientFd)->first << "*" << C_NRML <<std::endl;
-	// std::cout << "connect client\n";
-	//비번 확인
 	int index;
 	for (index = 1; index < OPEN_MAX; index++)
 	{
@@ -33,7 +38,7 @@ int Server::pollingEvent(){
 			break;
 		}
 	}
-	// TODO: i 최대값 확인하기
+	
 	_pollClient[index].events = POLLIN;
 	if (index > _maxClient)
 		_maxClient = index;
@@ -49,19 +54,10 @@ Server::Server(int port, std::string password) : _command(this){
 	_password = password;
 	sock_init();
 	_pollClient[0].fd = _serverSocketFd;
-	_pollClient[0].events = POLLIN;//읽을 데이터가 있다는 이벤트
-	// std::cout << "poll[0] fd" << _pollClient[0].fd << std::endl;
-	//_command = new Command(*this);
-	//_command = Command(this);
-
-	// pollifd 구조체의 모든 fd를 -1로 초기화
+	_pollClient[0].events = POLLIN;
 	for (int i = 1; i < OPEN_MAX; i++){
 		_pollClient[i].fd = -1;
 	}
-	//Client a(_serverSocketFd);//DUMMY
-	// 인덱스로 접근하는거 고쳐야함
-
-	//TODO : 생성자에서 try catch를 해도 되는가?
 }
 
 template <class T1, class T2>
@@ -80,12 +76,6 @@ void deleteMap(std::map<T1, T2> &map){
 
 Server::~Server(){
 	std::cout << "server destructer called\n";
-	// 서버닫기전에 전부 처리
-	// 맵 돌면서 모든 채널과 클라이언트 제거
-	// deleteClientMap();
-	// deleteChannelMap();
-	// 	std::map<int, Client *> _clientList;
-	// std::map<std::string, Channel *> _channelList;
 	deleteMap(_clientList);
 	deleteMap(_channelList);
 }
@@ -128,16 +118,11 @@ Channel* Server::findChannel(std::string name) {
 }
 
 int Server::sock_init(){
-	_serverSocketFd = socket(PF_INET, SOCK_STREAM, 0); //PF_INET, SOCK_STREAM, 0
+	_serverSocketFd = socket(PF_INET, SOCK_STREAM, 0);
 	_serverSocketAddr.sin_family = AF_INET;
 	_serverSocketAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	_serverSocketAddr.sin_port = htons(_port);
 
-	// int option = 1;
-	// setsockopt(_serverSocketFd, IPPROTO_TCP, TCP_NODELAY, (void *)&option, sizeof(option));
-	//setsockopt(_serverSocketFd, IPPROTO_TCP, TCP_NODELAY, (const sockaddr *)&_serverSocketAddr, sizeof(_serverSocketAddr));
-
-	// SO_REUSEADDR time-wait 중인 소켓에 재할당 가능하도록 설정
 	int optval = true;
 	socklen_t optlen = sizeof(optval);
 	setsockopt(_serverSocketFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optval, optlen);
@@ -153,7 +138,6 @@ int Server::sock_init(){
 	}
 	std::cout << C_GREN << "listening" << std::endl << C_NRML;
 	return (0);
-//TODO : 에러처리 나중에 어떻게 할 지 생각할 것
 }
 
 void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
@@ -167,17 +151,13 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		_command.privmsg(cmd_vec, client);
 	else if (cmd_vec[0] == "PING")
 		_command.pong(cmd_vec, client);
-	// else if (cmd_vec[0] == "PASS")
-	// 	_command.pass(cmd_vec, client);
 	else if (cmd_vec[0] == "PART")
 		_command.part(cmd_vec, client);
 	else if (cmd_vec[0] == "QUIT")
 		_command.quit(cmd_vec, client);
-	// else if (cmd_vec[0] == "WHOIS")
-	// 	_command.whois(cmd_vec, client);
 	else if (cmd_vec[0] == "PASS" || cmd_vec[0] == "USER")
 		_command.alreadyRegist(client);
-	else //미구현 커맨드 알림 또는 커맨드 무시
+	else
 		std::cout << C_RED << cmd_vec[0] << ": undefined cmd\n" << C_NRML;
 }
 
@@ -188,7 +168,7 @@ void Server::addChannelList(std::string channelName, int fd)
 
 void Server::relayEvent()
 {
-	char buf[512]; //
+	char buf[512];
 	for (int i = 1; i <= _maxClient; i++)
 	{
 		if (_pollClient[i].fd < 0)
@@ -196,7 +176,6 @@ void Server::relayEvent()
 		if (_pollClient[i].revents & (POLLIN))
 		{
 			memset(buf, 0x00, 512);
-			// read하고 write하기
 			if (recv(_pollClient[i].fd, buf, 512, 0) <= 0) //
 			{
 				_pollClient[i].fd = -1;
@@ -204,43 +183,30 @@ void Server::relayEvent()
 			else
 			{
 				Client * tmp = (_clientList.find(_pollClient[i].fd))->second;
-				// _msgBuffer = std::string(buf);
-				// if (std::strncmp(buf, "\r\n", 3) == 0)
-				// 	continue;
 				tmp->appendRecvBuffer(std::string(buf));
-				// if (tmp->getRecvBuffer() == "\r\n")
-				// { 
-				// 	tmp->clearRecvBuffer()\r\n;(층ㅁㅁㅇㅇㅇㅇㅇㅇㅇ)
-				// 	continue;
-				// }
 				std::cout << C_YLLW << "---- recvMsgBuf --- \n";
 				std::cout << tmp->getRecvBuffer() << std::endl;
 				std::cout << "pollfd : " << _pollClient[i].fd << std::endl;
 				std::cout << "ㄴ--- endRecvMsgBuf ---\n\n\n" << C_NRML << std::endl;
-				// CRLF 까지 왔는지 확인 후 split 하기
 				if (tmp->getRecvBuffer().find("\r\n") == std::string::npos)
 				{
 					continue;
 				}
-	
 				std::vector<std::string> cmd = split(tmp->getRecvBuffer(), "\r\n");
 				if (cmd[0] == "")
 					continue;
-				// TODO : 명령어 순서대로 처리하는 함수 추가하기
 				print_stringVector(cmd);
-				// 클라이언트가 등록이 안되어있을 때
 				if (!(tmp->getRegist() & REGI))
 				{
 					_command.welcome(cmd, (_clientList.find(_pollClient[i].fd))->second, _clientList);
 				}
 				else
 				{
-					// 이미 등록된 클라이언트에서 이벤트 발생
 					std::vector<std::string>::iterator cmd_it = cmd.begin();
 					while (cmd_it != cmd.end())
 					{
 						std::vector<std::string> result = split(*cmd_it, " ");
-						check_cmd(result, tmp); //클라이언트를 가지고 갈 것?
+						check_cmd(result, tmp);
 						cmd_it++;
 					}
 					tmp->getRecvBuffer().clear();
@@ -257,14 +223,12 @@ void Server::relayEvent()
 	for (; it != _clientList.end(); it++)
 	{
 		if (it->second->getMsgBuffer().empty() == false)
-		{ // send버퍼 있는 지 확인해서 있으면 send
+		{
 			std::string str = it->second->getMsgBuffer();
 			send(it->first, str.c_str(), str.length(), 0);
 			std::cout << C_BLUE <<"----- sendMsg to <" << it->first << "> -------\n";
 			std::cout << str;
 			std::cout << "ㄴ--------------------------\n" << std::endl << C_NRML;
-			
-			
 			str.clear();
 			it->second->clearMsgBuffer();
 		}
@@ -272,24 +236,21 @@ void Server::relayEvent()
 }
 
 int Server::execute(){
-	//int index = OPEN_MAX;
-	//signal(SIGPIPE, SIG_IGN);
 	while (42)
 	{
-		_pollLet = poll(_pollClient, _maxClient + 1, -1); //반환값?
+		_pollLet = poll(_pollClient, _maxClient + 1, -1);
 		if (_pollLet == 0 || _pollLet == -1)
 		{
 			std::cerr << C_RED << "pollet : " << _pollLet << std::endl << C_NRML;
 			break ;
 		}
-		// pollin 이벤트 받으면은 실행
 		if (_pollClient[0].revents & POLLIN)
 		{
 			if ((pollingEvent()) == -1){
 				continue;
 			}
 		}
-		relayEvent();//recvEvent, sendEvent;
+		relayEvent();
 	}
 	close(_serverSocketFd);
 	return (0);

@@ -1,11 +1,25 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Channel.cpp                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/02 16:26:48 by swang             #+#    #+#             */
+/*   Updated: 2022/06/02 16:34:25 by swang            ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../include/Channel.hpp"
 
 Channel::Channel(std::string channelName, int fd) : _operator(fd), _channelName(channelName){};
+
 Channel::~Channel(){};
+
 int Channel::getMyOperator()
 {
 	return _operator;
-};
+}
 
 void Channel::setMyOperator(int fd)
 {
@@ -21,10 +35,7 @@ std::vector<int> Channel::getMyClientFdList()
 void Channel::addMyClientList(int fd)
 {
 	_myClientFdList.push_back(fd);
-};
-
-
-
+}
 
 void Channel::removeClientList(int fd)
 {
@@ -32,7 +43,6 @@ void Channel::removeClientList(int fd)
 	if (it != _myClientFdList.end())
 		_myClientFdList.erase(it);
 }
-
 
 std::vector<int>::iterator Channel::findClient(int fd)
 {

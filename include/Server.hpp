@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.hpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/02 16:26:52 by swang             #+#    #+#             */
+/*   Updated: 2022/06/02 16:31:45 by swang            ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
@@ -32,59 +44,34 @@ class Server
 private:
 	std::map<int, Client *> _clientList;
 	std::map<std::string, Channel *> _channelList;
-	// std::vector<Channel *> _channelList;					//채널목록;
-	// std::vector<Client *> _clientList;					//전체 클라이언트목록;
-	int _port;											//포트 번호
-	std::string _password;								// 서버 비밀번호
-	std::string _msgBuffer;									// 클라이언트가 보내는 메세지 버퍼;
-
-	int _serverSocketFd;//서버소켓fd;
-	sockaddr_in _serverSocketAddr;//서버소켓주소;
+	int _port;
+	std::string _password;
+	int _serverSocketFd;
+	sockaddr_in _serverSocketAddr;
 	Command _command;
-
 	pollfd _pollClient[OPEN_MAX];
 	int _pollLet;
 	int _maxClient;
-
 	socklen_t _clientLen;
 	int _clientFd;
 	sockaddr_in _clientAddr;
-
 	int pollingEvent();
-	std::vector<std::pair<int, std::string> > parsing(); //명령어 파싱함수(); 잘라서 벡터로 반환
-	// TODO : 나중에 CMD, ARG 등 #define
-	// NICK, JOIN, USER, MSG, KICK, PASS, QUIT
-
+	std::vector<std::pair<int, std::string> > parsing();
 
 public:
 	Server(int port, std::string password);
-	~Server();	//소멸자
-
+	~Server();
 	std::map<int, Client *> &getClientList();
 	std::map<std::string, Channel *> &getChannelList();
 	Client *findClient(int fd);
 	Client *findClient(std::string nick);
 	Channel *findChannel(std::string name);
 	std::string getPass();
-	// 각 명령어 함수;
-	// 클라이언트 관리 함수(get / setClient);
-	// 채널 관리 함수(get / setChannel);
-	// TODO : 예외처리 클래스 구현
-
-	/* 서버 생성시 해야하는 일
-	1. 메인소켓생성
-	2. 바인드
-	3. 리슨
-	4. accept ( pollfd )
-	5. 파싱?
-	*/
 	int sock_init();
 	void check_cmd(std::vector<std::string> cmd_vec, Client *client);
-
 	void addChannelList(std::string channelName, int fd);
 	void relayEvent();
-
-	int execute(); // 소켓통신 실행함수();
+	int execute();
 	void removeUnconnectClient(int fd);
 };
 
