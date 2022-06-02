@@ -6,7 +6,7 @@
 /*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:37:51 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:37:53 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/02 16:49:12 by swang            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ int Server::pollingEvent(){
 	}
 	if (_clientFd < 0) {
 		std::cerr << "Error accepting client" << std::endl;
-		return -1;
+		exit(1);
 	}
 
 	_clientList.insert(std::pair<int, Client *>(_clientFd, new Client(_clientFd)));
@@ -134,7 +134,7 @@ int Server::sock_init(){
 	if (listen(_serverSocketFd, 15) == -1)
 	{
 		std::cerr << "Error listening socket" << std::endl;
-		exit(3);
+		exit(1);
 	}
 	std::cout << C_GREN << "listening" << std::endl << C_NRML;
 	return (0);
@@ -216,7 +216,7 @@ void Server::relayEvent()
 		else if (_pollClient[i].revents & (POLLERR))
 		{
 			std::cout << "--- ERROR ---" << std::endl;
-			exit(3);
+			exit(1);
 		}
 	}
 	std::map<int, Client *>::iterator it = _clientList.begin();

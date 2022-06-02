@@ -6,7 +6,7 @@
 /*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:33 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:26:35 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/02 16:50:26 by swang            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,17 +53,17 @@ int main(int argc, char **argv)
     if (argc != 3)
     {
         std::cout << "Usage: ./server <port> <password>\n";
-        exit(1);
+        return 1;
     }
 	if (check_port(argv[1]) == -1)
-		exit(1);
+		return 1;
 	signal(SIGINT, sigIntHandler);
 	signal(SIGQUIT, sigQuitHandler);
 	server = new Server(atoi(argv[1]), argv[2]);
 	if (server->execute() < 0)
 	{
 		delete server;
-		return (1);
+		return 1;
 	}
 	delete server;
 	return 0;
