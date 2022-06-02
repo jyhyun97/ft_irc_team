@@ -26,6 +26,7 @@ private:
 	bool isSpecial(char c);
 	bool isDuplication(std::string s, std::map<int, Client *> clientList);
 	bool nickValidate(std::string s);
+	bool channelValidate(std::string s);
 	Server *_server;
 	std::string makeFullname(int fd);
 public:
