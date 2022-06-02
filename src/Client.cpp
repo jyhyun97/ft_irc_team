@@ -49,6 +49,23 @@ void Client::appendMsgBuffer(std::string msgBuffer)
 	_msgBuffer.append(msgBuffer);
 }
 
+std::string &Client::getRecvBuffer()
+{
+	return _recvBuffer;
+}
+
+void Client::appendRecvBuffer(std::string recvBuffer)
+{
+	_recvBuffer.append(recvBuffer);
+}
+
+
+void Client::clearRecvBuffer()
+{
+	_recvBuffer = "";
+}
+
+
 int Client::getClientFd()
 {
 	return _clientFd;

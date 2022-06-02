@@ -50,7 +50,7 @@ private:
 	int _clientFd;
 	sockaddr_in _clientAddr;
 
-	int pollingEvent(int &index);
+	int pollingEvent();
 	std::vector<std::pair<int, std::string> > parsing(); //명령어 파싱함수(); 잘라서 벡터로 반환
 	// TODO : 나중에 CMD, ARG 등 #define
 	// NICK, JOIN, USER, MSG, KICK, PASS, QUIT

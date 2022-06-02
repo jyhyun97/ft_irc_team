@@ -22,6 +22,7 @@ class Client{
 		unsigned char _regist;
 		std::vector<std::string> _myChannelList;
 		std::string _msgBuffer; //*클라이언트에게 보낼 메세지버퍼;
+		std::string _recvBuffer;
 		// Server *server;
 	public :
 		Client(int clientFd);
@@ -29,6 +30,9 @@ class Client{
 		bool isRegist();
 		void clearMsgBuffer();
 		void appendMsgBuffer(std::string msgBuffer);
+		std::string &getRecvBuffer();
+		void appendRecvBuffer(std::string recvBuffer);
+		void clearRecvBuffer();
 		int getClientFd();
 		void addChannelList(std::string channelName);
 		void setNickName(std::string nickName);
