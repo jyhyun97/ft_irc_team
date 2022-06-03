@@ -6,7 +6,7 @@
 /*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:27:02 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 14:02:19 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/03 16:19:47 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,29 +37,29 @@ class Client{
 		std::string _recvBuffer;
 	public :
 		Client(int clientFd);
-		std::string getMsgBuffer();
+		~Client();
 		bool isRegist();
-		void clearMsgBuffer();
 		void appendMsgBuffer(std::string msgBuffer);
-		std::string &getRecvBuffer();
 		void appendRecvBuffer(std::string recvBuffer);
+		void clearMsgBuffer();
 		void clearRecvBuffer();
-		int getClientFd();
-		void addChannelList(std::string channelName);
-		void setNickName(std::string nickName);
-		std::string getNickName();
 		void setUser(std::string userName, std::string hostName, std::string serverName, std::string realName);
+		void setNickName(std::string nickName);
+		void setRegist(int bit);
+		int getClientFd();
+		unsigned char getRegist();
+		std::string getMsgBuffer();
+		std::string getNickName();
 		std::string getUserName();
 		std::string getHostName();
 		std::string getServerName();
 		std::string getRealName();
-		void DebugPrint();
+		std::string &getRecvBuffer();
 		std::vector<std::string> &getMyChannelList();
-		std::vector<std::string>::iterator findMyChannelIt(std::string item);
-		void removeChannelList(std::vector<std::string>::iterator it);
+		void addChannelList(std::string channelName);
 		void removeChannel(std::string serverName);
-		void setRegist(int bit);
-		unsigned char getRegist();
+		void removeChannelList(std::vector<std::string>::iterator it);
+		std::vector<std::string>::iterator findMyChannelIt(std::string item);
 };
 
 

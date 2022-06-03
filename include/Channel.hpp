@@ -6,7 +6,7 @@
 /*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:27:05 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 14:01:09 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/03 16:28:36 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ private :
 	int _operator;
 	std::string _channelName;
     std::vector<int> _myClientFdList;
+	
 	int checkChannelName();
 public :
 	Channel(std::string channelName, int fd);

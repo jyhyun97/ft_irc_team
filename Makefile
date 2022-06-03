@@ -3,17 +3,17 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+         #
+#    By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/05/22 15:29:02 by swang             #+#    #+#              #
-#    Updated: 2022/06/02 13:34:49 by swang            ###   ########.fr        #
+#    Updated: 2022/06/03 16:29:08 by jeonhyun         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = ircserv
 
 CXX = clang++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 INC = -Iinclude/
 
 SRC_DIR = src/

@@ -6,7 +6,7 @@
 /*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:45 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 14:02:32 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/03 16:18:07 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,8 @@
 #include <iostream>
 
 Client::Client(int clientFd) : _clientFd(clientFd), _regist(0) {}
+
+Client::~Client() {}
 
 std::string Client::getMsgBuffer()
 {
@@ -121,17 +123,6 @@ std::string Client::getServerName()
 std::string Client::getRealName()
 {
 	return _realName;
-}
-
-void Client::DebugPrint()
-{
-	std::cout << "nickName : " << _nickName << std::endl;
-	std::cout << "userName : " << _userName << std::endl;
-	std::cout << "hostName : " << _hostName << std::endl;
-	std::cout << "serverName : " << _serverName << std::endl;
-	std::cout << "realName : " << _realName << std::endl;
-	std::cout << "clientFd : " << _clientFd << std::endl;
-	std::cout << "msgBuffer : " << _msgBuffer << std::endl;
 }
 
 void Client::setRegist(int bit)

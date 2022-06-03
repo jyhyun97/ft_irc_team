@@ -6,7 +6,7 @@
 /*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:37:51 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 14:27:51 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/03 16:34:17 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -160,7 +160,7 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 	else if (cmd_vec[0] == "PASS" || cmd_vec[0] == "USER")
 		_command.alreadyRegist(client);
 	else
-		std::cout << C_RED << cmd_vec[0] << ": undefined cmd\n" << C_NRML;
+		std::cout << cmd_vec[0] << ": undefined cmd\n\n";
 }
 
 void Server::addChannelList(std::string channelName, int fd)
@@ -178,7 +178,7 @@ void Server::relayEvent()
 		if (_pollClient[i].revents & (POLLIN))
 		{
 			memset(buf, 0x00, 512);
-			if (recv(_pollClient[i].fd, buf, 512, 0) <= 0) //
+			if (recv(_pollClient[i].fd, buf, 512, 0) <= 0)
 			{
 				std::vector<std::string> tmp_vec;
 				tmp_vec.push_back("QUIT");
@@ -191,9 +191,9 @@ void Server::relayEvent()
 				Client * tmp = (_clientList.find(_pollClient[i].fd))->second;
 				tmp->appendRecvBuffer(std::string(buf));
 				std::cout << C_YLLW << "---- recvMsgBuf --- \n";
-				std::cout << tmp->getRecvBuffer() << std::endl;
+				std::cout << "[" << tmp->getRecvBuffer() << "]" << std::endl;
 				std::cout << "pollfd : " << _pollClient[i].fd << std::endl;
-				std::cout << "ㄴ--- endRecvMsgBuf ---\n\n\n" << C_NRML << std::endl;
+				std::cout << "ㄴ--- endRecvMsgBuf ---\n" << C_NRML << std::endl;
 				if (tmp->getRecvBuffer().find("\r\n") == std::string::npos)
 				{
 					continue;

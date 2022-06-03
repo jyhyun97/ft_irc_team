@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:52 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:31:45 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 16:28:10 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,37 +42,37 @@ class Command;
 class Server
 {
 private:
-	std::map<int, Client *> _clientList;
-	std::map<std::string, Channel *> _channelList;
 	int _port;
-	std::string _password;
 	int _serverSocketFd;
-	sockaddr_in _serverSocketAddr;
-	Command _command;
-	pollfd _pollClient[OPEN_MAX];
 	int _pollLet;
 	int _maxClient;
-	socklen_t _clientLen;
 	int _clientFd;
+	std::string _password;
+	socklen_t _clientLen;
+	sockaddr_in _serverSocketAddr;
 	sockaddr_in _clientAddr;
+	pollfd _pollClient[OPEN_MAX];
+	std::map<std::string, Channel *> _channelList;
+	std::map<int, Client *> _clientList;
+	Command _command;
+	
 	int pollingEvent();
-	std::vector<std::pair<int, std::string> > parsing();
+	int sock_init();
+	void relayEvent();
+	void check_cmd(std::vector<std::string> cmd_vec, Client *client);
 
 public:
 	Server(int port, std::string password);
 	~Server();
 	std::map<int, Client *> &getClientList();
 	std::map<std::string, Channel *> &getChannelList();
+	std::string getPass();
 	Client *findClient(int fd);
 	Client *findClient(std::string nick);
 	Channel *findChannel(std::string name);
-	std::string getPass();
-	int sock_init();
-	void check_cmd(std::vector<std::string> cmd_vec, Client *client);
 	void addChannelList(std::string channelName, int fd);
-	void relayEvent();
-	int execute();
 	void removeUnconnectClient(int fd);
+	int execute();
 };
 
 #endif

@@ -6,13 +6,19 @@
 /*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:43 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 15:43:31 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/03 16:21:29 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/Server.hpp"
 #include "../include/Command.hpp"
 #include "../include/Define.hpp"
+
+Command::Command(Server *server){
+    _server = server;
+}
+
+Command::~Command(){}
 
 bool Command::isLetter(char c)
 {
@@ -62,10 +68,6 @@ bool Command::nickValidate(std::string s)
             return false;
     }
     return true;
-}
-
-Command::Command(Server *server){
-    _server = server;
 }
 
 void Command::pong(std::vector<std::string> s, Client *client){
