@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:27:05 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:27:47 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 14:01:09 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ public :
 	int leaveEvent(Client &client);
 	void addMyClientList(int fd);
 	void removeClientList(int fd);
-	std::vector<int>::iterator findClient(int fd);
+	std::vector<int>::iterator findMyClientIt(int fd);
 	bool checkClientInChannel(int fd);
 };
 

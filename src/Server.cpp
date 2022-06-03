@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:37:51 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:49:12 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 14:27:51 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -149,6 +149,8 @@ void Server::check_cmd(std::vector<std::string> cmd_vec, Client *client){
 		_command.kick(cmd_vec, client);
 	else if (cmd_vec[0] == "PRIVMSG")
 		_command.privmsg(cmd_vec, client);
+	else if (cmd_vec[0] == "NOTICE")
+		_command.notice(cmd_vec, client);
 	else if (cmd_vec[0] == "PING")
 		_command.pong(cmd_vec, client);
 	else if (cmd_vec[0] == "PART")
@@ -178,6 +180,10 @@ void Server::relayEvent()
 			memset(buf, 0x00, 512);
 			if (recv(_pollClient[i].fd, buf, 512, 0) <= 0) //
 			{
+				std::vector<std::string> tmp_vec;
+				tmp_vec.push_back("QUIT");
+				tmp_vec.push_back(":lost connection");
+				_command.quit(tmp_vec, findClient(_pollClient[i].fd));
 				_pollClient[i].fd = -1;
 			}
 			else

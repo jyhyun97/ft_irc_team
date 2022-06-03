@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:48 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:34:25 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 14:01:04 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,12 +39,12 @@ void Channel::addMyClientList(int fd)
 
 void Channel::removeClientList(int fd)
 {
-	std::vector<int>::iterator it = findClient(fd);
+	std::vector<int>::iterator it = findMyClientIt(fd);
 	if (it != _myClientFdList.end())
 		_myClientFdList.erase(it);
 }
 
-std::vector<int>::iterator Channel::findClient(int fd)
+std::vector<int>::iterator Channel::findMyClientIt(int fd)
 {
 	std::vector<int>::iterator it = _myClientFdList.begin();
 	while (it != _myClientFdList.end())
@@ -58,7 +58,7 @@ std::vector<int>::iterator Channel::findClient(int fd)
 
 bool Channel::checkClientInChannel(int fd)
 {
-	std::vector<int>::iterator it = findClient(fd);
+	std::vector<int>::iterator it = findMyClientIt(fd);
 	if (it != _myClientFdList.end())
 		return true;
 	return false;

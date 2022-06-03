@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Command.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:27:00 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:28:43 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 14:18:09 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,7 @@ public:
 	void user(std::vector<std::string> s, Client *client);
 	void pass(std::vector<std::string> s, Client *client);
 	void privmsg(std::vector<std::string> s, Client *client);
+	void notice(std::vector<std::string> s, Client *client);
 	void nick(std::vector<std::string> s, Client *client);
 	void kick(std::vector<std::string> s, Client *client);
 	void join(std::vector<std::string> s, Client *client);

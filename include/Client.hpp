@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:27:02 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:28:16 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 14:02:19 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,7 +55,7 @@ class Client{
 		std::string getRealName();
 		void DebugPrint();
 		std::vector<std::string> &getMyChannelList();
-		std::vector<std::string>::iterator findChannel(std::string item);
+		std::vector<std::string>::iterator findMyChannelIt(std::string item);
 		void removeChannelList(std::vector<std::string>::iterator it);
 		void removeChannel(std::string serverName);
 		void setRegist(int bit);

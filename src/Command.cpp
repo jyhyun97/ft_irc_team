@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Command.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:43 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:34:14 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 15:43:31 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -265,6 +265,13 @@ void Command::privmsg(std::vector<std::string> s, Client *client)
 	}
 }
 
+void Command::notice(std::vector<std::string> s, Client *client)
+{
+	Client *receiver = _server->findClient(s[1]);
+	if (receiver != NULL)
+		receiver->appendMsgBuffer(makeFullname(client->getClientFd()) + " NOTICE " + receiver->getNickName() + " " + appendStringColon(2, s) + "\r\n");
+}
+
 void  Command::makePrivMessage(Client *client, std::string senderName, std::string receiver, std::string msg)
 {
 	if (client == NULL)
@@ -311,10 +318,10 @@ void Command::part(std::vector<std::string> s, Client *client)
 	std::vector<std::string>::iterator partChannelIt = partChannel.begin();
 	while (partChannelIt != partChannel.end())
     {
-		std::vector<std::string>::iterator searchChannelNameIt = client->findChannel(*partChannelIt);
+		std::vector<std::string>::iterator searchChannelNameIt = client->findMyChannelIt(*partChannelIt);
 		if (searchChannelNameIt != client->getMyChannelList().end())
         {
-			allInChannelMsg(client->getClientFd(), *searchChannelNameIt, "", appendStringColon(2, s));
+			allInChannelMsg(client->getClientFd(), *searchChannelNameIt, "PART", appendStringColon(2, s));
 			Channel *tmp = _server->findChannel(*partChannelIt);
             tmp->removeClientList(client->getClientFd());
 			client->removeChannelList(searchChannelNameIt);
@@ -503,7 +510,6 @@ void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int
 					return;
 				std::string dup = result[1];
 				result[1].append("_");
-				makeNumericReply(client->getClientFd(), ERR_NICKNAMEINUSE, ":" + dup + " is already owned");
 			}
 			client->setNickName(result[1]);
 			client->setRegist(NICK);

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:45 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:34:44 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/03 14:02:32 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@ std::string Client::getMsgBuffer()
 	return _msgBuffer;
 }
 
-std::vector<std::string>::iterator Client::findChannel(std::string item)
+std::vector<std::string>::iterator Client::findMyChannelIt(std::string item)
 {
 	std::vector<std::string>::iterator it = _myChannelList.begin();
 	while (it != _myChannelList.end())
@@ -39,7 +39,7 @@ void Client::removeChannelList(std::vector<std::string>::iterator it)
 
 void Client::removeChannel(std::string serverName)
 {
-	std::vector<std::string>::iterator it = findChannel(serverName);
+	std::vector<std::string>::iterator it = findMyChannelIt(serverName);
 	if (it != _myChannelList.end())
 		removeChannelList(it);
 }
