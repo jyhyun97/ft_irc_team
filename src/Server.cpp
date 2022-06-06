@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
+/*   By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:37:51 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 16:34:17 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/06 21:55:53 by hyahn            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,14 +16,14 @@
 int Server::pollingEvent(){
 	_clientLen = sizeof(_clientAddr);
 	_clientFd = accept(_serverSocketFd, (struct sockaddr *)&_clientAddr, &_clientLen);
+	if (_clientFd < 0) {
+		std::cerr << "Error accepting client" << std::endl;
+		exit(1);
+	}
 	int fcntlRet = fcntl(_clientFd, F_SETFL, O_NONBLOCK);
 	if (fcntlRet == -1)
 	{
 		std::cerr << C_RED << "fcntlRet" << C_NRML << std::endl;
-		exit(1);
-	}
-	if (_clientFd < 0) {
-		std::cerr << "Error accepting client" << std::endl;
 		exit(1);
 	}
 
@@ -38,7 +38,7 @@ int Server::pollingEvent(){
 			break;
 		}
 	}
-	
+
 	_pollClient[index].events = POLLIN;
 	if (index > _maxClient)
 		_maxClient = index;
@@ -266,10 +266,10 @@ int Server::execute(){
 void Server::removeUnconnectClient(int fd)
 {
 	Client *tmp = findClient(fd);
-	
+
 	std::string str = tmp->getMsgBuffer();
 	send(fd, str.c_str(), str.length(), 0);
-	
+
 	std::cout << C_BLUE <<"----- in removeclient sendMsg to <" << fd << "> -------\n";
 	std::cout << str;
 	std::cout << "ㄴ--------------------------\n" << std::endl << C_NRML;
