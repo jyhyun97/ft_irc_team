@@ -6,7 +6,7 @@
 /*   By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:43 by swang             #+#    #+#             */
-/*   Updated: 2022/06/06 23:40:55 by hyahn            ###   ########.fr       */
+/*   Updated: 2022/06/07 10:45:07 by hyahn            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -238,7 +238,6 @@ void Command::privmsg(std::vector<std::string> s, Client *client)
 				makeNumericReply(client->getClientFd(), ERR_NOSUCHNICK, *targetNameIt + " :No such nick/channel");
 			else
 			{
-				makePrivMessage(client, client->getNickName(), *targetNameIt, appendStringColon(2, s));
 				Client *receiver = _server->findClient(*targetNameIt);
 				if (receiver != NULL)
 					makePrivMessage(_server->findClient(*targetNameIt), client->getNickName(), receiver->getNickName(), appendStringColon(2, s));
