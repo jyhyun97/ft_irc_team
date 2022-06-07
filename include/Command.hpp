@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Command.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
+/*   By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:27:00 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 16:23:48 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/06 23:39:04 by hyahn            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,15 +41,13 @@ private:
 	bool nickValidate(std::string s);
 	bool channelValidate(std::string s);
 	Server *_server;
-	
+
 	std::string makeFullname(int fd);
 	void makePrivMessage(Client *client, std::string senderName, std::string receiver, std::string msg);
 	void channelMessage(std::string msg, Client *client, Channel *channel);
-	void leaveMessage(std::string msg, Client *client, Channel *channel);
 	void makeNumericReply(int fd, std::string flag, std::string str);
 	void makeCommandReply(int fd, std::string command, std::string str);
 	void welcomeMsg(int fd, std::string flag, std::string msg, std::string name);
-	void sendJoinMsg(int joinfd, std::string channelName);
 	void allInChannelMsg(int target, std::string channelName, std::string command, std::string msg);
 	void nameListMsg(int fd, std::string channelName);
 public:

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Command.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
+/*   By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:43 by swang             #+#    #+#             */
-/*   Updated: 2022/06/03 16:21:29 by jeonhyun         ###   ########.fr       */
+/*   Updated: 2022/06/07 10:45:07 by hyahn            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,16 +81,16 @@ void Command::nick(std::vector<std::string> s, Client *client)
 		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "NICK :Not enough parameters");
 		return;
 	}
-    if (isDuplication(s[1], _server->getClientList()))
-    {
+	if (isDuplication(s[1], _server->getClientList()))
+	{
 		makeNumericReply(client->getClientFd(), ERR_NICKNAMEINUSE, s[1] +" :Nickname is already in use");
-        return;
-    }
-    if (!nickValidate(s[1]))
-    {
+		return;
+	}
+	if (!nickValidate(s[1]))
+	{
 		makeNumericReply(client->getClientFd(), ERR_ERRONEUSNICKNAME, s[1] + " :Erroneus nickname");
-        return;
-    }
+		return;
+	}
 
 	std::vector<std::string> participatingChannelName = client->getMyChannelList();
 	makeCommandReply(client->getClientFd(), "NICK", s[1]);
@@ -101,17 +101,16 @@ void Command::nick(std::vector<std::string> s, Client *client)
 		while (participatingChannelNameIt != participatingChannelName.end())
 		{
 			Channel *channel = _server->findChannel(*participatingChannelNameIt);
-			if (channel == NULL)
-				continue;
-			std::vector<int> fdsInChannel = channel->getMyClientFdList();
-			std::vector<int>::iterator fdsInChannelIt = fdsInChannel.begin();
-			while(fdsInChannelIt != fdsInChannel.end())
+			if (channel != NULL)
 			{
-				if (client->getClientFd() != (*fdsInChannelIt))
+				std::vector<int> fdsInChannel = channel->getMyClientFdList();
+				std::vector<int>::iterator fdsInChannelIt = fdsInChannel.begin();
+				while(fdsInChannelIt != fdsInChannel.end())
 				{
-					fdList.insert(*fdsInChannelIt);
+					if (client->getClientFd() != (*fdsInChannelIt))
+						fdList.insert(*fdsInChannelIt);
+					fdsInChannelIt++;
 				}
-				fdsInChannelIt++;
 			}
 			participatingChannelNameIt++;
 		}
@@ -124,7 +123,7 @@ void Command::nick(std::vector<std::string> s, Client *client)
 		}
 		fdList.clear();
 	}
-    client->setNickName(s[1]);
+	client->setNickName(s[1]);
 };
 
 
@@ -167,71 +166,57 @@ void Command::kick(std::vector<std::string> s, Client *client)
 		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "KICK :Not enough parameters");
 		return;
 	}
-    std::vector<std::string> channelNames = split(s[1], ",");
+	std::vector<std::string> channelNames = split(s[1], ",");
 	std::vector<std::string>::iterator channelNameIt = channelNames.begin();
 	while (channelNameIt != channelNames.end())
-    {
-        Channel *channel = _server->findChannel(*channelNameIt);
+	{
+		Channel *channel = _server->findChannel(*channelNameIt);
 		if (channel == NULL)
-		{
 			makeNumericReply(client->getClientFd(), ERR_NOSUCHCHANNEL, *channelNameIt + " :No such channel");
-			channelNameIt++;
-			continue;
-		}
-		std::vector<std::string> kickedUserNickName = split(s[2], ",");
-		std::vector<std::string>::iterator kickedUserNickNameIt = kickedUserNickName.begin();
-		Client *kickedClient;
-		while (kickedUserNickNameIt != kickedUserNickName.end())
+		else
 		{
-			kickedClient = _server->findClient(*kickedUserNickNameIt);
-			if (kickedClient == NULL)
+			std::vector<std::string> kickedUserNickName = split(s[2], ",");
+			std::vector<std::string>::iterator kickedUserNickNameIt = kickedUserNickName.begin();
+			Client *kickedClient;
+			while (kickedUserNickNameIt != kickedUserNickName.end())
 			{
-				makeNumericReply(client->getClientFd(), "401", *kickedUserNickNameIt + " :No such nick/channel");
+				kickedClient = _server->findClient(*kickedUserNickNameIt);
+				if (kickedClient == NULL)
+					makeNumericReply(client->getClientFd(), "401", *kickedUserNickNameIt + " :No such nick/channel");
+				else
+				{
+					int operatorFd = channel->getMyOperator();
+					if (operatorFd != client->getClientFd())
+						makeNumericReply(client->getClientFd(), ERR_CHANOPRIVSNEEDED, *channelNameIt + " :You're not channel operator");
+					else if (!channel->checkClientInChannel(kickedClient->getClientFd()))
+						makeNumericReply(client->getClientFd(), ERR_USERNOTINCHANNEL, *kickedUserNickNameIt + " " + *channelNameIt + " :They aren't on that channel");
+					else
+					{
+						if (sLength > 3)
+							allInChannelMsg(client->getClientFd(), *channelNameIt, "KICK", *kickedUserNickNameIt + " " + appendStringColon(3, s));
+						else
+							allInChannelMsg(client->getClientFd(), *channelNameIt, "KICK", *kickedUserNickNameIt);
+						channel->removeClientList(kickedClient->getClientFd());
+						kickedClient->removeChannel(*channelNameIt);
+						if (channel->getMyClientFdList().empty() == true)
+						{
+							_server->getChannelList().erase(channel->getChannelName());
+							delete channel;
+						}
+						else
+							channel->setMyOperator(*(channel->getMyClientFdList().begin()));
+					}
+				}
 				kickedUserNickNameIt++;
-				continue;
 			}
-			else
-			{
-				int operatorFd = channel->getMyOperator();
-				if (operatorFd != client->getClientFd())
-				{
-					makeNumericReply(client->getClientFd(), ERR_CHANOPRIVSNEEDED, *channelNameIt + " :You're not channel operator");
-					kickedUserNickNameIt++;
-					continue;
-				}
-				if (!channel->checkClientInChannel(kickedClient->getClientFd())){
-					makeNumericReply(client->getClientFd(), ERR_USERNOTINCHANNEL, *kickedUserNickNameIt + " " + *channelNameIt + " :They aren't on that channel");
-					kickedUserNickNameIt++;
-					continue;
-				}
-				std::string msg;
-				if (sLength > 3)
-					msg = makeFullname(client->getClientFd()) + " KICK " + *channelNameIt + " " + *kickedUserNickNameIt + " " + appendStringColon(3, s) + "\r\n";
-				else
-					msg = makeFullname(client->getClientFd()) + " KICK " + *channelNameIt + " " + *kickedUserNickNameIt + "\r\n";
-				client->appendMsgBuffer(msg);
-				leaveMessage(msg, client, channel);
-				channel->removeClientList(kickedClient->getClientFd());
-				kickedClient->removeChannel(*channelNameIt);
-				if (channel->getMyClientFdList().empty() == true)
-				{
-					_server->getChannelList().erase(channel->getChannelName());
-					delete channel;
-				}
-				else
-				{
-					channel->setMyOperator(*(channel->getMyClientFdList().begin()));
-				}
-			}
-			kickedUserNickNameIt++;
 		}
-        channelNameIt++;
-    }
+		channelNameIt++;
+	}
 }
 
 void Command::privmsg(std::vector<std::string> s, Client *client)
 {
-	if (s.size() < 2)
+	if (s.size() <= 2)
 	{
 		makeNumericReply(client->getClientFd(), ERR_NEEDMOREPARAMS, "PRIVMSG :Not enough parameters");
 		return;
@@ -242,26 +227,21 @@ void Command::privmsg(std::vector<std::string> s, Client *client)
 	{
 		if((*targetNameIt)[0] == '#')
 		{
-            if (_server->findChannel(*targetNameIt) == NULL)
-            {
+			if (_server->findChannel(*targetNameIt) == NULL)
 				makeNumericReply(client->getClientFd(), ERR_NOSUCHCHANNEL, *targetNameIt + " :No such channel");
-                targetNameIt++;
-                continue;
-            }
-            channelMessage(appendStringColon(2, s), client, _server->findChannel(*targetNameIt));
+			else
+				channelMessage(appendStringColon(2, s), client, _server->findChannel(*targetNameIt));
 		}
 		else
 		{
-            if (_server->findClient(*targetNameIt) == NULL)
-            {
-				makeNumericReply(client->getClientFd(), "401", *targetNameIt + " :No such nick/channel");
-                targetNameIt++;
-                continue;
-            }
-            client->appendMsgBuffer(":" + client->getNickName() + " PRIVMSG " + (*targetNameIt) + " " + appendStringColon(2, s) + "\r\n");
-			Client *receiver = _server->findClient(*targetNameIt);
-			if (receiver != NULL)
-				makePrivMessage(_server->findClient(*targetNameIt), client->getNickName(), receiver->getNickName(), appendStringColon(2, s));
+			if (_server->findClient(*targetNameIt) == NULL)
+				makeNumericReply(client->getClientFd(), ERR_NOSUCHNICK, *targetNameIt + " :No such nick/channel");
+			else
+			{
+				Client *receiver = _server->findClient(*targetNameIt);
+				if (receiver != NULL)
+					makePrivMessage(_server->findClient(*targetNameIt), client->getNickName(), receiver->getNickName(), appendStringColon(2, s));
+			}
 		}
 		targetNameIt++;
 	}
@@ -279,7 +259,6 @@ void  Command::makePrivMessage(Client *client, std::string senderName, std::stri
 	if (client == NULL)
 		return ;
 	client->appendMsgBuffer(":" + senderName + " PRIVMSG " + receiver + " " + msg + "\r\n");
-	std::cout << "fd : " << client->getClientFd() << std::endl;
 }
 
 void Command::channelMessage(std::string msg, Client *client, Channel *channel)
@@ -293,21 +272,6 @@ void Command::channelMessage(std::string msg, Client *client, Channel *channel)
         clientsInChannelIt++;
 	}
 }
-void Command::leaveMessage(std::string msg, Client *client, Channel *channel)
-{
-	std::vector<int> clientsInChannel = channel->getMyClientFdList();
-	std::vector<int>::iterator clientsIt = clientsInChannel.begin();
-	while(clientsIt != clientsInChannel.end())
-	{
-		if (client->getClientFd() != (*clientsIt))
-		{
-			_server->findClient(*clientsIt)->appendMsgBuffer(msg);
-		}
-		clientsIt++;
-	}
-}
-
-
 
 void Command::part(std::vector<std::string> s, Client *client)
 {
@@ -403,18 +367,6 @@ void Command::allInChannelMsg(int target, std::string channelName, std::string c
 	}
 }
 
-void Command::sendJoinMsg(int joinfd, std::string channelName)
-{
-	Channel *channelPtr = _server->findChannel(channelName);
-	std::vector<int> myClientList = channelPtr->getMyClientFdList();
-	std::vector<int>::iterator It = myClientList.begin();
-	for(; It < myClientList.end(); It++)
-	{
-		Client *tmp = _server->findClient(*It);
-		tmp->appendMsgBuffer(makeFullname(joinfd) + " JOIN " + channelName + "\r\n");
-	}
-}
-
 void Command::nameListMsg(int fd, std::string channelName)
 {
 	Client *tmp = _server->findClient(fd);
@@ -497,7 +449,7 @@ void Command::welcome(std::vector<std::string> cmd, Client *client, std::map<int
 				makeNumericReply(client->getClientFd(), ERR_PASSWDMISMATCH, ":Server Password Incorrect");
 				_server->removeUnconnectClient(client->getClientFd());
 				return ;
-            } 
+            }
 		}
 		else if (client->getRegist() & PASS && result[0] == "NICK")
 		{
