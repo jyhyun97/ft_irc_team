@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Command.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:43 by swang             #+#    #+#             */
-/*   Updated: 2022/06/07 10:45:07 by hyahn            ###   ########.fr       */
+/*   Updated: 2022/06/07 12:48:01 by jeonhyun         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -326,6 +326,10 @@ void Command::quit(std::vector<std::string> s, Client *client)
             _server->getChannelList().erase(tmp->getChannelName());
             delete tmp;
         }
+		else
+		{
+			tmp->setMyOperator(*(tmp->getMyClientFdList().begin()));
+		}
         channelListInClientClassIt++;
     }
     _server->getClientList().erase(client->getClientFd());

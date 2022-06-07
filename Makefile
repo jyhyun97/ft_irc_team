@@ -6,13 +6,13 @@
 #    By: jeonhyun <jeonhyun@student.42seoul.kr>     +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2022/05/22 15:29:02 by swang             #+#    #+#              #
-#    Updated: 2022/06/03 16:29:08 by jeonhyun         ###   ########.fr        #
+#    Updated: 2022/06/07 12:34:07 by jeonhyun         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = ircserv
 
-CXX = clang++
+CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 INC = -Iinclude/
 
