@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: swang <swang@student.42seoul.kr>           +#+  +:+       +#+        */
+/*   By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:26:33 by swang             #+#    #+#             */
-/*   Updated: 2022/06/02 16:50:26 by swang            ###   ########.fr       */
+/*   Updated: 2022/06/07 12:12:36 by hyahn            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,6 @@ void	sigIntHandler(int num)
 {
 	if (num == SIGINT)
 		delete server;
-	system("leaks ircserv");
 	exit(1);
 }
 
@@ -44,7 +43,6 @@ void	sigQuitHandler(int num)
 {
 	if (num == SIGQUIT)
 		delete server;
-	system("leaks ircserv");
 	exit(1);
 }
 

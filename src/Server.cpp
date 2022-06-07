@@ -6,7 +6,7 @@
 /*   By: hyahn <hyahn@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/06/02 16:37:51 by swang             #+#    #+#             */
-/*   Updated: 2022/06/06 21:55:53 by hyahn            ###   ########.fr       */
+/*   Updated: 2022/06/07 11:36:42 by hyahn            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,6 +76,10 @@ void deleteMap(std::map<T1, T2> &map){
 
 Server::~Server(){
 	std::cout << "server destructer called\n";
+	std::map<int, Client *>::iterator it = _clientList.begin();
+	for(; it != _clientList.end(); it++){
+		close(it->first);
+	}
 	deleteMap(_clientList);
 	deleteMap(_channelList);
 }
@@ -118,15 +122,17 @@ Channel* Server::findChannel(std::string name) {
 }
 
 int Server::sock_init(){
-	_serverSocketFd = socket(PF_INET, SOCK_STREAM, 0);
+	_serverSocketFd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	_serverSocketAddr.sin_family = AF_INET;
 	_serverSocketAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	_serverSocketAddr.sin_port = htons(_port);
+	for (int i = 0; i < 8; i++)
+		_serverSocketAddr.sin_zero[i] = 0;
 
 	int optval = true;
 	socklen_t optlen = sizeof(optval);
 	setsockopt(_serverSocketFd, SOL_SOCKET, SO_REUSEADDR, (void *)&optval, optlen);
-	if (bind(_serverSocketFd, (const sockaddr *)&_serverSocketAddr, sizeof(_serverSocketAddr)))
+	if (bind(_serverSocketFd, (const sockaddr *)&_serverSocketAddr, sizeof(_serverSocketAddr)) == -1)
 	{
 		std::cerr << "Error binding socket" << std::endl;
 		exit(1);
